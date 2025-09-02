@@ -45,6 +45,27 @@ CREATE TABLE IF NOT EXISTS transactions (
 );
 
 
+-- Archival job tracking tables
+CREATE TABLE IF NOT EXISTS archival_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    start_block BIGINT NOT NULL,
+    end_block BIGINT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    s3_path TEXT,
+    archived_count BIGINT DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMPTZ,
+    error_message TEXT,
+    UNIQUE(start_block, end_block)
+);
+
+CREATE TABLE IF NOT EXISTS archival_state (
+    table_name TEXT PRIMARY KEY,
+    last_archived_block BIGINT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_flashblocks_builder_block ON flashblocks(builder_id, block_number);
 CREATE INDEX IF NOT EXISTS idx_flashblocks_received_at ON flashblocks(received_at);
@@ -55,3 +76,7 @@ CREATE INDEX IF NOT EXISTS idx_transactions_flashblock_id ON transactions(flashb
 CREATE INDEX IF NOT EXISTS idx_transactions_builder_block ON transactions(builder_id, block_number);
 CREATE INDEX IF NOT EXISTS idx_transactions_payload_id ON transactions(payload_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_tx_hash ON transactions(tx_hash);
+
+-- Archival table indexes
+CREATE INDEX IF NOT EXISTS idx_archival_jobs_status ON archival_jobs(status);
+CREATE INDEX IF NOT EXISTS idx_archival_jobs_blocks ON archival_jobs(start_block, end_block);

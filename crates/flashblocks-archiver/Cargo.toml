@@ -12,42 +12,41 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 metrics = { workspace = true }
 metrics-derive = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+sqlx = { workspace = true }
+url = { workspace = true }
+futures-util = { workspace = true }
 tokio-tungstenite = { version = "0.26.2", features = ["native-tls"] }
-sqlx = { version = "0.8.6", features = [
-    "runtime-tokio-native-tls",
-    "postgres",
-    "uuid",
-    "chrono",
-    "json",
-] }
-uuid = { version = "1.6.1", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
-anyhow = "1.0"
-futures-util = "0.3"
-url = { version = "2.4", features = ["serde"] }
 brotli = "8.0.1"
 
+# Retention dependencies
+aws-sdk-s3 = { workspace = true }
+aws-config = { workspace = true }
+arrow = { workspace = true }
+parquet = { workspace = true }
+tempfile = "3.8"
+
 # alloy
-alloy-primitives = { version = "1.2.0", default-features = false, features = [
-    "map-foldhash",
-] }
-alloy-genesis = { version = "1.0.23", default-features = false }
-alloy-eips = { version = "1.0.23", default-features = false }
-alloy-rpc-types = { version = "1.0.23", default-features = false }
-alloy-rpc-types-engine = { version = "1.0.23", default-features = false }
-alloy-rpc-types-eth = { version = "1.0.23" }
-alloy-consensus = { version = "1.0.23" }
-alloy-trie = { version = "0.9.0", default-features = false }
-alloy-provider = { version = "1.0.23" }
-alloy-hardforks = { version = "0.2.12" }
-alloy-rpc-client = { version = "1.0.23" }
+alloy-primitives = { workspace = true }
+alloy-genesis = { workspace = true }
+alloy-eips = { workspace = true }
+alloy-rpc-types = { workspace = true }
+alloy-rpc-types-engine = { workspace = true }
+alloy-rpc-types-eth = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-trie = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-hardforks = { workspace = true }
+alloy-rpc-client = { workspace = true }
 
 # op-alloy
-op-alloy-rpc-types = { version = "0.18.12", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.18.12", default-features = false }
-op-alloy-rpc-jsonrpsee = { version = "0.18.12", default-features = false }
-op-alloy-network = { version = "0.18.12", default-features = false }
-op-alloy-consensus = { version = "0.18.12", default-features = false }
+op-alloy-rpc-types = { workspace = true }
+op-alloy-rpc-types-engine = { workspace = true }
+op-alloy-rpc-jsonrpsee = { workspace = true }
+op-alloy-network = { workspace = true }
+op-alloy-consensus = { workspace = true }
 
 
 # reth
@@ -81,5 +80,4 @@ path = "src/main.rs"
 [dev-dependencies]
 testcontainers = "0.23"
 testcontainers-modules = { version = "0.11", features = ["postgres"] }
-tempfile = "3.8"
 tokio-test = "0.4"

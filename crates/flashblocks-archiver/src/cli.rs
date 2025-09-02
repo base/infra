@@ -4,7 +4,9 @@ use url::Url;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "flashblocks-archiver")]
-#[command(about = "Archives flashblock messages from multiple builders to PostgreSQL")]
+#[command(
+    about = "Archives flashblock messages from multiple builders to PostgreSQL, and periodically dumps Parquet files to S3"
+)]
 pub struct FlashblocksArchiverArgs {
     #[arg(
         long,
@@ -69,6 +71,62 @@ pub struct FlashblocksArchiverArgs {
         help = "Flush interval in seconds"
     )]
     pub flush_interval_seconds: u64,
+
+    // Retention settings
+    #[arg(
+        long,
+        env = "RETENTION_ENABLED",
+        default_value = "true",
+        help = "Enable data retention/archival"
+    )]
+    pub retention_enabled: bool,
+
+    #[arg(
+        long,
+        env = "RETENTION_PERIOD_DAYS",
+        default_value = "30",
+        help = "Number of days to keep data in PostgreSQL before archiving to S3"
+    )]
+    pub retention_period_days: u64,
+
+    #[arg(
+        long,
+        env = "RETENTION_ARCHIVE_INTERVAL_HOURS",
+        default_value = "6",
+        help = "How often to run archival process in hours"
+    )]
+    pub archive_interval_hours: u64,
+
+    #[arg(
+        long,
+        env = "RETENTION_BLOCK_RANGE_SIZE",
+        default_value = "21600",
+        help = "Number of blocks to archive in each job (21600 = 6 hours on Base)"
+    )]
+    pub block_range_size: u64,
+
+    #[arg(
+        long,
+        env = "S3_BUCKET_NAME",
+        help = "S3 bucket name for archival storage"
+    )]
+    pub s3_bucket_name: Option<String>,
+
+    #[arg(
+        long,
+        env = "S3_REGION",
+        default_value = "us-east-1",
+        help = "S3 region"
+    )]
+    pub s3_region: String,
+
+    #[arg(
+        long,
+        env = "S3_KEY_PREFIX",
+        default_value = "flashblocks/",
+        help = "S3 key prefix for archived files"
+    )]
+    pub s3_key_prefix: String,
 }
 
 #[derive(Debug, Clone)]

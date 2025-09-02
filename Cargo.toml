@@ -12,6 +12,29 @@ serde_json = "1.0"
 metrics = "0.24.1"
 metrics-derive = "0.1"
 
+# Shared dependencies used by multiple crates
+uuid = { version = "1.18", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-native-tls",
+    "postgres",
+    "uuid",
+    "chrono",
+    "json",
+] }
+url = { version = "2.5", features = ["serde"] }
+futures-util = "0.3"
+bytes = "1.10"
+
+# AWS SDK
+aws-config = { version = "1.8", features = ["behavior-version-latest"] }
+aws-sdk-s3 = { version = "1.103", features = ["behavior-version-latest"] }
+
+# Arrow/Parquet
+arrow = "56.1.0"
+parquet = "56.1.0"
+
 # alloy
 alloy-primitives = { version = "1.2.0", default-features = false, features = [
     "map-foldhash",

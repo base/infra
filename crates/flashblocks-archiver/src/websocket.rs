@@ -1,4 +1,4 @@
-use crate::{cli::BuilderConfig, FlashblockMessage, Metadata};
+use crate::{cli::BuilderConfig, types::Metadata, FlashblockMessage};
 use anyhow::{anyhow, Result};
 use futures_util::StreamExt;
 use rollup_boost::FlashblocksPayloadV1;
