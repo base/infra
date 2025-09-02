@@ -100,7 +100,7 @@ impl Database {
     }
 
     #[allow(clippy::too_many_arguments)]
-    async fn store_transaction(
+    pub async fn store_transaction(
         &self,
         flashblock_id: Uuid,
         builder_id: Uuid,
@@ -165,21 +165,43 @@ impl Database {
 
     // Archival methods
 
-    pub async fn create_archival_job(&self, start_block: u64, end_block: u64) -> Result<Uuid> {
-        let job_id = sqlx::query_scalar::<_, Uuid>(
+    /// Creates an archival job, returning Ok(Some(job_id)) if created or Ok(None) if job already exists
+    /// This handles the case where multiple instances try to create the same block-aligned job
+    pub async fn create_archival_job_idempotent(
+        &self,
+        start_block: u64,
+        end_block: u64,
+    ) -> Result<Option<Uuid>> {
+        match sqlx::query_scalar::<_, Uuid>(
             r#"
             INSERT INTO archival_jobs (start_block, end_block, status)
             VALUES ($1, $2, $3)
+            ON CONFLICT (start_block, end_block) DO NOTHING
             RETURNING id
             "#,
         )
         .bind(start_block as i64)
         .bind(end_block as i64)
         .bind(ArchivalStatus::Pending.to_string())
-        .fetch_one(&self.pool)
-        .await?;
-
-        Ok(job_id)
+        .fetch_optional(&self.pool)
+        .await?
+        {
+            Some(job_id) => Ok(Some(job_id)),
+            None => {
+                // Job already exists, try to get its ID
+                match sqlx::query_scalar::<_, Uuid>(
+                    "SELECT id FROM archival_jobs WHERE start_block = $1 AND end_block = $2",
+                )
+                .bind(start_block as i64)
+                .bind(end_block as i64)
+                .fetch_optional(&self.pool)
+                .await?
+                {
+                    Some(_existing_id) => Ok(None), // Job exists but wasn't created by us
+                    None => Ok(None),               // Shouldn't happen but handle gracefully
+                }
+            }
+        }
     }
 
     pub async fn get_pending_archival_jobs(&self, limit: i64) -> Result<Vec<ArchivalJob>> {
@@ -196,6 +218,27 @@ impl Database {
         .await?;
 
         Ok(jobs)
+    }
+
+    pub async fn get_archival_jobs(&self, limit: i64) -> Result<Vec<ArchivalJob>> {
+        let jobs = sqlx::query_as::<_, ArchivalJob>(
+            "SELECT * FROM archival_jobs ORDER BY created_at ASC LIMIT $1",
+        )
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(jobs)
+    }
+
+    pub async fn get_num_pending_archival_jobs(&self) -> Result<i64> {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM archival_jobs WHERE status = 'pending'",
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(count)
     }
 
     pub async fn update_archival_job_status(
@@ -326,6 +369,15 @@ impl Database {
     pub async fn get_oldest_block_number(&self) -> Result<Option<u64>> {
         let result: (Option<i64>,) =
             sqlx::query_as("SELECT MIN(block_number) as min_block FROM flashblocks")
+                .fetch_one(&self.pool)
+                .await?;
+
+        Ok(result.0.map(|b| b as u64))
+    }
+
+    pub async fn get_global_latest_block_number(&self) -> Result<Option<u64>> {
+        let result: (Option<i64>,) =
+            sqlx::query_as("SELECT MAX(block_number) as max_block FROM flashblocks")
                 .fetch_one(&self.pool)
                 .await?;
 

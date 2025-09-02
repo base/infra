@@ -83,11 +83,11 @@ pub struct FlashblocksArchiverArgs {
 
     #[arg(
         long,
-        env = "RETENTION_PERIOD_DAYS",
-        default_value = "30",
-        help = "Number of days to keep data in PostgreSQL before archiving to S3"
+        env = "RETENTION_BLOCKS",
+        default_value = "1296000",
+        help = "Number of blocks to keep data in PostgreSQL before archiving to S3 (43200 * 30 = 30 days on Base)"
     )]
-    pub retention_period_days: u64,
+    pub retention_blocks: u64,
 
     #[arg(
         long,
@@ -110,7 +110,7 @@ pub struct FlashblocksArchiverArgs {
         env = "S3_BUCKET_NAME",
         help = "S3 bucket name for archival storage"
     )]
-    pub s3_bucket_name: Option<String>,
+    pub s3_bucket_name: String,
 
     #[arg(
         long,

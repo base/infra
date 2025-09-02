@@ -35,36 +35,27 @@ impl FlashblocksArchiver {
             builder_ids.insert(builder_config.name.clone(), builder_id);
         }
 
-        // Initialize metrics first
         let metrics = Metrics::default();
 
-        // Initialize retention coordinator if enabled
         let retention_coordinator = if args.retention_enabled {
-            if let Some(bucket_name) = &args.s3_bucket_name {
-                info!(message = "Initializing retention coordinator", bucket = %bucket_name);
+            info!(message = "Initializing retention coordinator", bucket = %args.s3_bucket_name);
 
-                let s3_manager = S3Manager::new(
-                    bucket_name.clone(),
-                    args.s3_region.clone(),
-                    args.s3_key_prefix.clone(),
-                )
-                .await?;
+            let s3_manager = S3Manager::new(
+                args.s3_bucket_name.clone(),
+                args.s3_region.clone(),
+                args.s3_key_prefix.clone(),
+            )
+            .await?;
 
-                let coordinator = ArchivalCoordinator::new(
-                    database.clone(),
-                    s3_manager,
-                    args.retention_period_days,
-                    args.block_range_size,
-                    metrics.clone(),
-                );
+            let coordinator = ArchivalCoordinator::new(
+                database.clone(),
+                s3_manager,
+                args.retention_blocks,
+                args.block_range_size,
+                metrics.clone(),
+            );
 
-                Some(coordinator)
-            } else {
-                warn!(
-                    message = "Retention enabled but no S3 bucket configured, disabling retention"
-                );
-                None
-            }
+            Some(coordinator)
         } else {
             info!(message = "Data retention disabled");
             None
@@ -98,23 +89,20 @@ impl FlashblocksArchiver {
         let mut batch = Vec::with_capacity(self.args.batch_size);
         let mut flush_interval = interval(Duration::from_secs(self.args.flush_interval_seconds));
 
-        // Start retention background task if coordinator is available
         let mut retention_interval = if self.retention_coordinator.is_some() {
+            info!(
+                message = "Retention background task enabled",
+                interval_hours = self.args.archive_interval_hours,
+                retention_blocks = self.args.retention_blocks,
+                block_range_size = self.args.block_range_size
+            );
+
             Some(interval(Duration::from_secs(
                 self.args.archive_interval_hours * 3600,
             )))
         } else {
             None
         };
-
-        if self.retention_coordinator.is_some() {
-            info!(
-                message = "Retention background task enabled",
-                interval_hours = self.args.archive_interval_hours,
-                retention_period_days = self.args.retention_period_days,
-                block_range_size = self.args.block_range_size
-            );
-        }
 
         info!(message = "FlashblocksArchiver started, listening for flashblock messages");
 

@@ -86,7 +86,7 @@ impl ParquetWriter {
         let struct_builder = StructBuilder::new(
             transaction_struct_fields,
             vec![
-                Box::new(BinaryBuilder::new()) as Box<dyn arrow::array::ArrayBuilder>,
+                Box::new(BinaryBuilder::new()),
                 Box::new(StringBuilder::new()),
                 Box::new(Int32Builder::new()),
                 Box::new(Int64Builder::new()),

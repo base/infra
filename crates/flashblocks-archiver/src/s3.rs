@@ -1,24 +1,51 @@
 use anyhow::Result;
-use aws_sdk_s3::primitives::ByteStream;
-use aws_sdk_s3::Client as S3Client;
+use aws_config::{BehaviorVersion, Region};
+use aws_sdk_s3::{self as s3, operation::head_object::HeadObjectError};
 use std::path::Path;
 use tracing::{error, info};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct S3Manager {
-    client: S3Client,
+    client: s3::Client,
     bucket: String,
     key_prefix: String,
 }
 
 impl S3Manager {
     pub async fn new(bucket: String, region: String, key_prefix: String) -> Result<Self> {
-        let config = aws_config::defaults(aws_config::BehaviorVersion::latest())
-            .region(aws_config::Region::new(region))
+        let config = aws_config::defaults(BehaviorVersion::latest())
+            .region(Region::new(region))
             .load()
             .await;
 
-        let client = S3Client::new(&config);
+        let client = s3::Client::new(&config);
+
+        Ok(Self {
+            client,
+            bucket,
+            key_prefix,
+        })
+    }
+
+    #[cfg(test)]
+    pub async fn new_with_endpoint(
+        bucket: String,
+        key_prefix: String,
+        endpoint_url: String,
+    ) -> Result<Self> {
+        let config = aws_sdk_s3::config::Builder::default()
+            .behavior_version(BehaviorVersion::latest())
+            .region(Region::new("us-east-1"))
+            .credentials_provider(s3::config::Credentials::new(
+                "fake", "fake", None, None, "test",
+            ))
+            .endpoint_url(endpoint_url)
+            .build();
+
+        let client = s3::Client::from_conf(config);
+
+        client.create_bucket().bucket(bucket.clone()).send().await?;
+        info!("Created bucket {}", bucket);
 
         Ok(Self {
             client,
@@ -38,7 +65,7 @@ impl S3Manager {
         );
 
         let file_size = std::fs::metadata(local_path)?.len();
-        let body = ByteStream::from_path(Path::new(local_path)).await?;
+        let body = s3::primitives::ByteStream::from_path(Path::new(local_path)).await?;
 
         let request = self
             .client
@@ -111,22 +138,14 @@ impl S3Manager {
             .await
         {
             Ok(_) => Ok(true),
-            Err(e) => {
-                if e.to_string().contains("NotFound") || e.to_string().contains("404") {
-                    Ok(false)
-                } else {
-                    Err(anyhow::anyhow!("S3 head_object failed: {}", e))
-                }
-            }
+            Err(e) => match e.into_service_error() {
+                HeadObjectError::NotFound(_) => Ok(false),
+                err => Err(anyhow::anyhow!("S3 head_object failed: {:?}", err)),
+            },
         }
     }
 
-    pub async fn list_files(&self, prefix: Option<&str>) -> Result<Vec<String>> {
-        let list_prefix = match prefix {
-            Some(p) => format!("{}{}", self.key_prefix, p),
-            None => self.key_prefix.clone(),
-        };
-
+    pub async fn list_files(&self) -> Result<Vec<String>> {
         let mut keys = Vec::new();
         let mut continuation_token = None;
 
@@ -135,7 +154,7 @@ impl S3Manager {
                 .client
                 .list_objects_v2()
                 .bucket(&self.bucket)
-                .prefix(&list_prefix);
+                .prefix(&self.key_prefix);
 
             if let Some(token) = &continuation_token {
                 request = request.continuation_token(token);
@@ -179,7 +198,7 @@ mod tests {
     #[test]
     fn test_generate_archive_key() {
         let s3_manager = S3Manager {
-            client: S3Client::new(&aws_config::SdkConfig::builder().build()),
+            client: s3::Client::new(&aws_config::SdkConfig::builder().build()),
             bucket: "test-bucket".to_string(),
             key_prefix: "flashblocks/".to_string(),
         };

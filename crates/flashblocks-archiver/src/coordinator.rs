@@ -4,7 +4,6 @@ use crate::parquet::ParquetWriter;
 use crate::s3::S3Manager;
 use crate::types::{ArchivalJob, ArchivalStatus};
 use anyhow::Result;
-use chrono::{Duration, Utc};
 use std::time::Instant;
 use tempfile::TempDir;
 use tracing::{error, info, warn};
@@ -14,7 +13,7 @@ use uuid::Uuid;
 pub struct ArchivalCoordinator {
     database: Database,
     s3_manager: S3Manager,
-    retention_period_days: u64,
+    retention_blocks: u64,
     block_range_size: u64,
     metrics: Metrics,
 }
@@ -23,14 +22,14 @@ impl ArchivalCoordinator {
     pub fn new(
         database: Database,
         s3_manager: S3Manager,
-        retention_period_days: u64,
+        retention_blocks: u64,
         block_range_size: u64,
         metrics: Metrics,
     ) -> Self {
         Self {
             database,
             s3_manager,
-            retention_period_days,
+            retention_blocks,
             block_range_size,
             metrics,
         }
@@ -41,13 +40,9 @@ impl ArchivalCoordinator {
         info!(message = "Starting archival cycle");
 
         let result = async {
-            // Step 1: Create new archival jobs for eligible data
             self.create_archival_jobs().await?;
-
-            // Step 2: Process pending archival jobs
             self.process_pending_jobs().await?;
-
-            Ok::<(), anyhow::Error>(())
+            Ok(())
         }
         .await;
 
@@ -68,18 +63,32 @@ impl ArchivalCoordinator {
             .record(cycle_start.elapsed().as_secs_f64());
 
         // Update pending jobs gauge
-        let pending_jobs = self.database.get_pending_archival_jobs(1000).await?;
-        self.metrics
-            .archival_jobs_pending
-            .set(pending_jobs.len() as f64);
+        let pending_jobs = self.database.get_num_pending_archival_jobs().await?;
+        self.metrics.archival_jobs_pending.set(pending_jobs as f64);
 
         Ok(())
     }
 
     async fn create_archival_jobs(&self) -> Result<()> {
-        let _cutoff_date = Utc::now() - Duration::days(self.retention_period_days as i64);
+        let latest_block = match self.database.get_global_latest_block_number().await? {
+            Some(block) => block,
+            None => {
+                info!(message = "No data found for archival");
+                return Ok(());
+            }
+        };
 
-        // Get the oldest block number that needs archiving
+        let retention_cutoff = if latest_block > self.retention_blocks {
+            latest_block - self.retention_blocks
+        } else {
+            info!(
+                message = "Not enough blocks for archival",
+                latest_block = latest_block,
+                retention_blocks = self.retention_blocks
+            );
+            return Ok(());
+        };
+
         let oldest_block = match self.database.get_oldest_block_number().await? {
             Some(block) => block,
             None => {
@@ -88,61 +97,74 @@ impl ArchivalCoordinator {
             }
         };
 
-        // Calculate blocks that are older than retention period
-        // For simplicity, we'll estimate blocks based on time (assuming 2-second blocks on Base)
-        let blocks_per_day = 24 * 60 * 60 / 2; // 43,200 blocks per day
-        let retention_blocks = self.retention_period_days * blocks_per_day;
+        if oldest_block >= retention_cutoff {
+            info!(
+                message = "No blocks need archival",
+                oldest_block = oldest_block,
+                retention_cutoff = retention_cutoff
+            );
+            return Ok(());
+        }
 
-        // Get the latest block to determine what needs archiving
-        // This is a simplification - in production you'd want to track this more precisely
-        let mut current_block = oldest_block;
+        info!(
+            message = "Creating archival jobs",
+            oldest_block = oldest_block,
+            retention_cutoff = retention_cutoff,
+            latest_block = latest_block,
+            retention_blocks = self.retention_blocks
+        );
 
-        // Create archival jobs for block ranges that are older than retention period
-        loop {
+        // Create block-aligned archival jobs for ranges that are older than retention cutoff
+        // Align to block_range_size boundaries to prevent overlapping jobs from multiple instances
+        let start_aligned_block = (oldest_block / self.block_range_size) * self.block_range_size;
+        let end_aligned_block =
+            ((retention_cutoff - 1) / self.block_range_size) * self.block_range_size;
+
+        let mut current_block = start_aligned_block;
+        while current_block <= end_aligned_block {
             let end_block = std::cmp::min(
                 current_block + self.block_range_size - 1,
-                current_block + retention_blocks,
+                retention_cutoff, // Don't go past the retention cutoff
             );
 
-            // Check if this range has enough data and isn't already being archived
+            // Only create job if this range has data to archive
             let count = self
                 .database
                 .count_flashblocks_in_range(current_block, end_block)
                 .await?;
 
-            if count == 0 {
-                break; // No more data to archive
-            }
-
-            // Check if a job already exists for this range
-            let existing_jobs = self.database.get_pending_archival_jobs(100).await?;
-            let range_exists = existing_jobs.iter().any(|job| {
-                job.start_block as u64 == current_block && job.end_block as u64 == end_block
-            });
-
-            if !range_exists && count > 0 {
-                let job_id = self
+            if count > 0 {
+                // Use idempotent job creation - handles concurrent instances gracefully
+                match self
                     .database
-                    .create_archival_job(current_block, end_block)
-                    .await?;
+                    .create_archival_job_idempotent(current_block, end_block)
+                    .await?
+                {
+                    Some(job_id) => {
+                        self.metrics.archival_jobs_created.increment(1);
 
-                self.metrics.archival_jobs_created.increment(1);
-
-                info!(
-                    message = "Created archival job",
-                    job_id = %job_id,
-                    start_block = current_block,
-                    end_block = end_block,
-                    flashblock_count = count
-                );
+                        info!(
+                            message = "Created archival job",
+                            job_id = %job_id,
+                            start_block = current_block,
+                            end_block = end_block,
+                            flashblock_count = count
+                        );
+                    }
+                    None => {
+                        // Job already exists (created by another instance)
+                        info!(
+                            message = "Archival job already exists",
+                            start_block = current_block,
+                            end_block = end_block,
+                            flashblock_count = count
+                        );
+                    }
+                }
             }
 
-            current_block = end_block + 1;
-
-            // Safety check - don't create too many jobs in one cycle
-            if current_block > oldest_block + (retention_blocks * 2) {
-                break;
-            }
+            // Move to next block-aligned range
+            current_block += self.block_range_size;
         }
 
         Ok(())
@@ -200,7 +222,6 @@ impl ArchivalCoordinator {
 
         match result {
             Ok((s3_path, archived_count)) => {
-                // Mark job as completed
                 self.database
                     .update_archival_job_status(
                         job_id,
@@ -227,7 +248,6 @@ impl ArchivalCoordinator {
                 );
             }
             Err(e) => {
-                // Mark job as failed
                 self.database
                     .update_archival_job_status(
                         job_id,
@@ -277,7 +297,6 @@ impl ArchivalCoordinator {
             return Ok((archive_key, 0));
         }
 
-        // Fetch data in chunks to avoid memory issues
         let chunk_size = 1000;
         let mut offset = 0;
         let mut all_data = Vec::new();
@@ -314,7 +333,6 @@ impl ArchivalCoordinator {
             return Ok((archive_key, 0));
         }
 
-        // Write to Parquet file
         let parquet_start = Instant::now();
         let parquet_path = temp_file_path.to_str().unwrap();
 
@@ -346,7 +364,6 @@ impl ArchivalCoordinator {
             rows_written = rows_written
         );
 
-        // Upload to S3
         let s3_start = Instant::now();
         let file_size = std::fs::metadata(parquet_path)?.len();
 
@@ -370,7 +387,6 @@ impl ArchivalCoordinator {
             }
         };
 
-        // Delete local data after successful upload
         let (deleted_flashblocks, deleted_transactions) = self
             .database
             .delete_archived_data(start_block, end_block)
@@ -380,7 +396,7 @@ impl ArchivalCoordinator {
             .transactions_archived_count
             .record(deleted_transactions as f64);
 
-        std::fs::remove_file(parquet_path)?;
+        // std::fs::remove_file(parquet_path)?;
 
         info!(
             message = "Deleted archived data from database",
@@ -389,15 +405,5 @@ impl ArchivalCoordinator {
         );
 
         Ok((s3_key, total_count))
-    }
-
-    pub async fn cleanup_failed_jobs(&self, _max_age_hours: u64) -> Result<()> {
-        info!(message = "Cleaning up old failed jobs");
-
-        // This would require additional database methods to find and clean up old failed jobs
-        // For now, we'll just log that cleanup would happen here
-        info!(message = "Failed job cleanup completed");
-
-        Ok(())
     }
 }

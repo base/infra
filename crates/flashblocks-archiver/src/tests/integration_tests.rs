@@ -1,6 +1,9 @@
 use crate::{
-    cli::BuilderConfig, tests::common::PostgresTestContainer, types::Metadata,
-    websocket::WebSocketManager, Database, FlashblockMessage,
+    cli::BuilderConfig,
+    database::Database,
+    tests::common::PostgresTestContainer,
+    types::{FlashblockMessage, Metadata},
+    websocket::WebSocketManager,
 };
 use alloy_primitives::{
     map::foldhash::{HashMap, HashMapExt},
