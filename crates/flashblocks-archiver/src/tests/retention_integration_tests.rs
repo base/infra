@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 struct RetentionTestSetup {
     postgres: PostgresTestContainer,
+    _localstack: LocalStackTestContainer,
     builder_id: Uuid,
     s3_manager: S3Manager,
 }
@@ -35,6 +36,7 @@ impl RetentionTestSetup {
 
         Ok(Self {
             postgres,
+            _localstack: localstack,
             builder_id,
             s3_manager,
         })
