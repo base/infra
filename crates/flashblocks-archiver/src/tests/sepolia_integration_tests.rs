@@ -28,6 +28,13 @@ impl SepoliaTestSetup {
             buffer_size: 100,
             batch_size: 10,
             flush_interval_seconds: 1,
+            retention_enabled: false,
+            retention_blocks: 1296000,
+            archive_interval_hours: 6,
+            block_range_size: 21600,
+            s3_bucket_name: "bucket".to_string(),
+            s3_region: "us-east-1".to_string(),
+            s3_key_prefix: "flashblocks/".to_string(),
         };
 
         Ok(Self { postgres, args })
@@ -272,6 +279,13 @@ async fn test_websocket_error_handling() -> anyhow::Result<()> {
         buffer_size: 10,
         batch_size: 5,
         flush_interval_seconds: 1,
+        retention_enabled: false,
+        retention_blocks: 1296000,
+        archive_interval_hours: 6,
+        block_range_size: 21600,
+        s3_bucket_name: "test-bucket".to_string(),
+        s3_region: "us-east-1".to_string(),
+        s3_key_prefix: "flashblocks/".to_string(),
     };
 
     // This should fail to create the archiver due to database connection failure

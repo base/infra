@@ -1,5 +1,6 @@
 use alloy_primitives::{map::foldhash::HashMap, Address, B256, U256};
 use alloy_rpc_types_engine::PayloadId;
+use anyhow;
 use chrono::{DateTime, Utc};
 use reth_optimism_primitives::OpReceipt;
 use rollup_boost::{ExecutionPayloadBaseV1, ExecutionPayloadFlashblockDeltaV1};
@@ -42,7 +43,7 @@ pub struct Flashblock {
     pub received_at: DateTime<Utc>,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, Serialize, Deserialize)]
 pub struct Transaction {
     pub id: Uuid,
     pub flashblock_id: Uuid,
@@ -51,6 +52,55 @@ pub struct Transaction {
     pub flashblock_index: i64,
     pub block_number: i64,
     pub tx_data: Vec<u8>,
+    pub tx_hash: String,
     pub tx_index: i32,
     pub created_at: DateTime<Utc>,
+}
+
+// Archival types
+#[derive(Debug, sqlx::FromRow)]
+pub struct ArchivalJob {
+    pub id: Uuid,
+    pub start_block: i64,
+    pub end_block: i64,
+    pub status: String,
+    pub s3_path: Option<String>,
+    pub archived_count: i64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub error_message: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ArchivalStatus {
+    Pending,
+    Processing,
+    Completed,
+    Failed,
+}
+
+impl std::fmt::Display for ArchivalStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArchivalStatus::Pending => write!(f, "pending"),
+            ArchivalStatus::Processing => write!(f, "processing"),
+            ArchivalStatus::Completed => write!(f, "completed"),
+            ArchivalStatus::Failed => write!(f, "failed"),
+        }
+    }
+}
+
+impl std::str::FromStr for ArchivalStatus {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "pending" => Ok(ArchivalStatus::Pending),
+            "processing" => Ok(ArchivalStatus::Processing),
+            "completed" => Ok(ArchivalStatus::Completed),
+            "failed" => Ok(ArchivalStatus::Failed),
+            _ => Err(anyhow::anyhow!("Invalid archival status: {}", s)),
+        }
+    }
 }
