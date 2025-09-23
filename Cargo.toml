@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mempool-rebroadcaster", "crates/flashblocks-archiver", "crates/blockbuilding-sidecar"]
+members = ["crates/mempool-rebroadcaster", "crates/flashblocks-archiver", "crates/sidecrush"]
 
 [workspace.dependencies]
 clap = { version = "4.0", features = ["derive", "env"] }
