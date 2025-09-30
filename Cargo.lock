@@ -11124,6 +11124,8 @@ dependencies = [
  "metrics",
  "metrics-derive",
  "metrics-exporter-dogstatsd",
+ "once_cell",
+ "reth-metrics",
  "tokio",
  "tracing",
  "tracing-subscriber 0.3.20",
