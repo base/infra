@@ -3373,7 +3373,7 @@ dependencies = [
  "chrono",
  "clap",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "metrics-derive",
  "op-alloy-consensus",
  "op-alloy-network",
@@ -5398,16 +5398,6 @@ dependencies = [
 
 [[package]]
 name = "metrics"
-version = "0.23.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3045b4193fbdc5b5681f32f11070da9be3609f189a79f3390706d42587f46bb5"
-dependencies = [
- "ahash",
- "portable-atomic",
-]
-
-[[package]]
-name = "metrics"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25dea7ac8057892855ec285c440160265225438c3c45072613c25a4b26e98ef5"
@@ -5430,27 +5420,6 @@ dependencies = [
 
 [[package]]
 name = "metrics-exporter-prometheus"
-version = "0.15.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4f0c8427b39666bf970460908b213ec09b3b350f20c0c2eabcbba51704a08e6"
-dependencies = [
- "base64 0.22.1",
- "http-body-util",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "indexmap 2.11.4",
- "ipnet",
- "metrics 0.23.1",
- "metrics-util 0.17.0",
- "quanta",
- "thiserror 1.0.69",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "metrics-exporter-prometheus"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd7399781913e5393588a8d8c6a2867bf85fb38eaf2502fdce465aad2dc6f034"
@@ -5462,8 +5431,8 @@ dependencies = [
  "hyper-util",
  "indexmap 2.11.4",
  "ipnet",
- "metrics 0.24.2",
- "metrics-util 0.19.1",
+ "metrics",
+ "metrics-util",
  "quanta",
  "thiserror 1.0.69",
  "tokio",
@@ -5479,26 +5448,11 @@ dependencies = [
  "libc",
  "libproc",
  "mach2",
- "metrics 0.24.2",
+ "metrics",
  "once_cell",
  "procfs",
  "rlimit",
  "windows 0.58.0",
-]
-
-[[package]]
-name = "metrics-util"
-version = "0.17.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4259040465c955f9f2f1a4a8a16dc46726169bca0f88e8fb2dbeced487c3e828"
-dependencies = [
- "crossbeam-epoch",
- "crossbeam-utils",
- "hashbrown 0.14.5",
- "metrics 0.23.1",
- "num_cpus",
- "quanta",
- "sketches-ddsketch 0.2.2",
 ]
 
 [[package]]
@@ -5512,13 +5466,13 @@ dependencies = [
  "crossbeam-utils",
  "hashbrown 0.15.5",
  "indexmap 2.11.4",
- "metrics 0.24.2",
+ "metrics",
  "ordered-float",
  "quanta",
  "radix_trie",
  "rand 0.9.2",
  "rand_xoshiro",
- "sketches-ddsketch 0.3.0",
+ "sketches-ddsketch",
 ]
 
 [[package]]
@@ -7145,7 +7099,7 @@ dependencies = [
  "alloy-primitives",
  "futures-core",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "reth-chain-state",
  "reth-metrics",
  "reth-payload-builder",
@@ -7170,7 +7124,7 @@ dependencies = [
  "alloy-signer",
  "alloy-signer-local",
  "derive_more",
- "metrics 0.24.2",
+ "metrics",
  "parking_lot",
  "pin-project",
  "rand 0.9.2",
@@ -7429,7 +7383,7 @@ dependencies = [
  "alloy-primitives",
  "derive_more",
  "eyre",
- "metrics 0.24.2",
+ "metrics",
  "page_size",
  "parking_lot",
  "reth-db-api",
@@ -7458,7 +7412,7 @@ dependencies = [
  "arbitrary",
  "bytes",
  "derive_more",
- "metrics 0.24.2",
+ "metrics",
  "modular-bitfield",
  "parity-scale-codec",
  "proptest",
@@ -7557,7 +7511,7 @@ dependencies = [
  "enr",
  "futures",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "rand 0.9.2",
  "reth-chainspec",
  "reth-ethereum-forks",
@@ -7605,7 +7559,7 @@ dependencies = [
  "futures",
  "futures-util",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "pin-project",
  "rayon",
  "reth-config",
@@ -7807,7 +7761,7 @@ dependencies = [
  "derive_more",
  "futures",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "mini-moka",
  "parking_lot",
  "rayon",
@@ -8124,7 +8078,7 @@ dependencies = [
  "auto_impl",
  "derive_more",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "reth-execution-errors",
  "reth-execution-types",
  "reth-metrics",
@@ -8195,7 +8149,7 @@ dependencies = [
  "eyre",
  "futures",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "parking_lot",
  "reth-chain-state",
  "reth-chainspec",
@@ -8326,7 +8280,7 @@ version = "1.6.0"
 source = "git+https://github.com/paradigmxyz/reth?tag=v1.6.0#d8451e54e7267f9f1634118d6d279b2216f7e2bb"
 dependencies = [
  "futures",
- "metrics 0.24.2",
+ "metrics",
  "metrics-derive",
  "tokio",
  "tokio-util",
@@ -8370,7 +8324,7 @@ dependencies = [
  "enr",
  "futures",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "parking_lot",
  "pin-project",
  "rand 0.8.5",
@@ -8739,10 +8693,10 @@ dependencies = [
  "eyre",
  "http",
  "jsonrpsee-server 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.24.2",
- "metrics-exporter-prometheus 0.16.2",
+ "metrics",
+ "metrics-exporter-prometheus",
  "metrics-process",
- "metrics-util 0.19.1",
+ "metrics-util",
  "procfs",
  "reth-metrics",
  "reth-tasks",
@@ -9027,7 +8981,7 @@ dependencies = [
  "jsonrpsee 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-core 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-types 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.24.2",
+ "metrics",
  "op-alloy-consensus",
  "op-alloy-network",
  "op-alloy-rpc-jsonrpsee",
@@ -9094,7 +9048,7 @@ dependencies = [
  "c-kzg",
  "derive_more",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "op-alloy-consensus",
  "op-alloy-flz",
  "op-alloy-rpc-types",
@@ -9124,7 +9078,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rpc-types",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "reth-chain-state",
  "reth-ethereum-engine-primitives",
  "reth-metrics",
@@ -9246,7 +9200,7 @@ dependencies = [
  "dashmap 6.1.0",
  "eyre",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "notify",
  "parking_lot",
  "rayon",
@@ -9288,7 +9242,7 @@ dependencies = [
  "alloy-eips",
  "alloy-primitives",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "rayon",
  "reth-chainspec",
  "reth-config",
@@ -9492,7 +9446,7 @@ dependencies = [
  "alloy-provider",
  "http",
  "jsonrpsee 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.24.2",
+ "metrics",
  "pin-project",
  "reth-chain-state",
  "reth-chainspec",
@@ -9557,7 +9511,7 @@ dependencies = [
  "async-trait",
  "jsonrpsee-core 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-types 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.24.2",
+ "metrics",
  "parking_lot",
  "reth-chainspec",
  "reth-engine-primitives",
@@ -9637,7 +9591,7 @@ dependencies = [
  "itertools 0.14.0",
  "jsonrpsee-core 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee-types 0.25.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "metrics 0.24.2",
+ "metrics",
  "rand 0.9.2",
  "reth-chain-state",
  "reth-chainspec",
@@ -9754,7 +9708,7 @@ dependencies = [
  "aquamarine",
  "auto_impl",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "reth-consensus",
  "reth-errors",
  "reth-metrics",
@@ -9865,7 +9819,7 @@ dependencies = [
  "auto_impl",
  "dyn-clone",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "pin-project",
  "rayon",
  "reth-metrics",
@@ -9929,7 +9883,7 @@ dependencies = [
  "auto_impl",
  "bitflags 2.9.4",
  "futures-util",
- "metrics 0.24.2",
+ "metrics",
  "parking_lot",
  "paste",
  "rand 0.9.2",
@@ -9967,7 +9921,7 @@ dependencies = [
  "alloy-trie",
  "auto_impl",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "reth-execution-errors",
  "reth-metrics",
  "reth-primitives-traits",
@@ -10028,7 +9982,7 @@ dependencies = [
  "alloy-rlp",
  "derive_more",
  "itertools 0.14.0",
- "metrics 0.24.2",
+ "metrics",
  "rayon",
  "reth-db-api",
  "reth-execution-errors",
@@ -10053,7 +10007,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-trie",
  "auto_impl",
- "metrics 0.24.2",
+ "metrics",
  "reth-execution-errors",
  "reth-metrics",
  "reth-primitives-traits",
@@ -10442,10 +10396,10 @@ dependencies = [
  "hyper-rustls",
  "hyper-util",
  "jsonrpsee 0.25.1 (git+https://github.com/paritytech/jsonrpsee?rev=f04afa740e55db60dce20d9839758792f035ffff)",
- "metrics 0.24.2",
+ "metrics",
  "metrics-derive",
- "metrics-exporter-prometheus 0.16.2",
- "metrics-util 0.19.1",
+ "metrics-exporter-prometheus",
+ "metrics-util",
  "moka",
  "op-alloy-rpc-types-engine",
  "opentelemetry",
@@ -11132,9 +11086,9 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
- "metrics 0.24.2",
+ "metrics",
  "metrics-derive",
- "metrics-exporter-prometheus 0.15.3",
+ "metrics-exporter-prometheus",
  "once_cell",
  "reth-metrics",
  "tokio",
@@ -11214,12 +11168,6 @@ dependencies = [
  "tempfile",
  "walkdir",
 ]
-
-[[package]]
-name = "sketches-ddsketch"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85636c14b73d81f541e525f585c0a2109e6744e1565b5c1668e31c70c10ed65c"
 
 [[package]]
 name = "sketches-ddsketch"
