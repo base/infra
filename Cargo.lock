@@ -2022,6 +2022,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cadence"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3075f133bee430b7644c54fb629b9b4420346ffa275a45c81a6babe8b09b4f51"
+dependencies = [
+ "crossbeam-channel",
+]
+
+[[package]]
+name = "cadence-macros"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33521416213ffba7559ea8e0190ab2690e286c2a1e04d63d18fe4498aefefed6"
+dependencies = [
+ "cadence",
+]
+
+[[package]]
 name = "camino"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11085,12 +11103,9 @@ dependencies = [
  "alloy-transport-http",
  "anyhow",
  "async-trait",
+ "cadence",
+ "cadence-macros",
  "clap",
- "metrics",
- "metrics-derive",
- "metrics-exporter-prometheus",
- "once_cell",
- "reth-metrics",
  "tokio",
  "tracing",
  "tracing-subscriber 0.3.20",
