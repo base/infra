@@ -54,13 +54,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=$SCCACHE_DIR,sharing=locked \
     PROFILE_FLAG=$([ "$RELEASE" = "true" ] && echo "--release" || echo "") && \
     TARGET_DIR=$([ "$RELEASE" = "true" ] && echo "release" || echo "debug") && \
-    if cargo metadata --no-deps --format-version=1 | jq -r '.packages[].targets[] | select(.name==env.SERVICE_NAME and (.kind[] | contains("bin"))) | .name' | grep -q "^${SERVICE_NAME}$"; then \
-      cargo build $PROFILE_FLAG --features="$FEATURES" --bin ${SERVICE_NAME}; \
-      cp target/$TARGET_DIR/${SERVICE_NAME} /tmp/final_binary; \
-    else \
-      cargo build $PROFILE_FLAG --features="$FEATURES" --package=${SERVICE_NAME}; \
-      cp target/$TARGET_DIR/${SERVICE_NAME} /tmp/final_binary; \
-    fi
+    cargo build $PROFILE_FLAG --features="$FEATURES" --package=${SERVICE_NAME}; \
+    cp target/$TARGET_DIR/${SERVICE_NAME} /tmp/final_binary
 
 #
 # Runtime container
