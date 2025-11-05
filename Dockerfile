@@ -1,11 +1,3 @@
-#
-# Base container (with sccache and cargo-chef)
-#
-# - https://github.com/mozilla/sccache
-# - https://github.com/LukeMathWalker/cargo-chef
-#
-# Based on https://depot.dev/blog/rust-dockerfile-best-practices
-#
 FROM rust:1.88.0 AS base
 
 ARG FEATURES
