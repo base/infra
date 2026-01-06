@@ -38,7 +38,7 @@ crates/
 Clone the repository:
 
 ```bash
-git clone https://github.com/base/roxy
+git clone https://github.com/refcell/roxy
 cd roxy
 ```
 

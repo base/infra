@@ -35,5 +35,3 @@ tracing-subscriber.workspace = true
 # error handling
 eyre.workspace = true
 
-[dev-dependencies]
-rstest.workspace = true

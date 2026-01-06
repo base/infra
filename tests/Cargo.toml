@@ -35,13 +35,10 @@ path = "config_integration.rs"
 
 [dependencies]
 # Local crates
-roxy-backend = { workspace = true }
 roxy-cache = { workspace = true }
 roxy-config = { workspace = true }
 roxy-rpc = { workspace = true }
-roxy-server = { workspace = true }
 roxy-traits = { workspace = true }
-roxy-test-utils = { workspace = true }
 
 # Runtime
 tokio = { workspace = true }

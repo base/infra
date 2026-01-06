@@ -32,5 +32,3 @@ reqwest.workspace = true
 tracing.workspace = true
 derive_more.workspace = true
 
-[dev-dependencies]
-rstest.workspace = true

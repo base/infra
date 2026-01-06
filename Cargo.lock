@@ -2661,7 +2661,6 @@ dependencies = [
  "reqwest",
  "roxy-traits",
  "roxy-types",
- "rstest",
  "tokio",
  "tracing",
 ]
@@ -2696,7 +2695,6 @@ dependencies = [
  "roxy-rpc",
  "roxy-server",
  "roxy-traits",
- "rstest",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -2733,7 +2731,6 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "roxy-traits",
- "rstest",
  "tokio",
 ]
 
@@ -2780,12 +2777,9 @@ name = "roxy-tests"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "roxy-backend",
  "roxy-cache",
  "roxy-config",
  "roxy-rpc",
- "roxy-server",
- "roxy-test-utils",
  "roxy-traits",
  "serde_json",
  "tokio",
@@ -2801,7 +2795,6 @@ dependencies = [
  "bytes",
  "derive_more",
  "roxy-types",
- "rstest",
  "tokio",
 ]
 

@@ -28,5 +28,3 @@ async-trait = "0.1"
 bytes.workspace = true
 derive_more.workspace = true
 
-[dev-dependencies]
-rstest.workspace = true
