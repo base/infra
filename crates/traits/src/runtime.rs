@@ -1,8 +1,11 @@
 //! Runtime traits for task spawning, time, and metrics.
 
+use std::{
+    future::Future,
+    time::{Duration, Instant},
+};
+
 use derive_more::{Debug, Display, Error, From};
-use std::future::Future;
-use std::time::{Duration, Instant};
 
 /// Handle to a spawned task.
 #[derive(Debug)]
@@ -95,4 +98,23 @@ pub trait Gauge: Send + Sync + 'static {
 
     /// Decrement the gauge by 1.
     fn dec(&self);
+}
+
+/// Metrics registry for creating and registering metrics.
+pub trait MetricsRegistry: Send + Sync + 'static {
+    /// Counter type produced by this registry.
+    type Counter: Counter;
+    /// Histogram type produced by this registry.
+    type Histogram: Histogram;
+    /// Gauge type produced by this registry.
+    type Gauge: Gauge;
+
+    /// Create and register a counter.
+    fn counter(&self, name: &str, help: &str) -> Self::Counter;
+
+    /// Create and register a histogram with the given buckets.
+    fn histogram(&self, name: &str, help: &str, buckets: &[f64]) -> Self::Histogram;
+
+    /// Create and register a gauge.
+    fn gauge(&self, name: &str, help: &str) -> Self::Gauge;
 }

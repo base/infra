@@ -7,5 +7,20 @@
 use tokio as _;
 use tracing as _;
 
+mod compressed;
+pub use compressed::CompressedCache;
+
+mod fallback;
+pub use fallback::FallbackCache;
+
 mod memory;
 pub use memory::MemoryCache;
+
+mod redis;
+pub use redis::RedisCache;
+
+mod rmap;
+pub use rmap::RMap;
+
+mod rpc_cache;
+pub use rpc_cache::{CachePolicy, RpcCache};

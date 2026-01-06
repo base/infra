@@ -1,13 +1,17 @@
 //! HTTP backend implementation.
 
-use crate::health::EmaHealthTracker;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
 use alloy_json_rpc::{RequestPacket, ResponsePacket};
 use async_trait::async_trait;
 use roxy_traits::{Backend, HealthStatus, HealthTracker};
 use roxy_types::RoxyError;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+
+use crate::health::EmaHealthTracker;
 
 /// Configuration for HTTP backend.
 #[derive(Debug, Clone)]
@@ -22,11 +26,7 @@ pub struct BackendConfig {
 
 impl Default for BackendConfig {
     fn default() -> Self {
-        Self {
-            timeout: Duration::from_secs(30),
-            max_retries: 3,
-            max_batch_size: 100,
-        }
+        Self { timeout: Duration::from_secs(30), max_retries: 3, max_batch_size: 100 }
     }
 }
 
@@ -66,9 +66,7 @@ impl HttpBackend {
             .json(request)
             .send()
             .await
-            .map_err(|_| RoxyError::BackendOffline {
-                backend: self.name.clone(),
-            })?;
+            .map_err(|_| RoxyError::BackendOffline { backend: self.name.clone() })?;
 
         let duration = start.elapsed();
         let success = response.status().is_success();
@@ -76,14 +74,13 @@ impl HttpBackend {
         self.health.write().await.record(duration, success);
 
         if !success {
-            return Err(RoxyError::BackendOffline {
-                backend: self.name.clone(),
-            });
+            return Err(RoxyError::BackendOffline { backend: self.name.clone() });
         }
 
-        response.json().await.map_err(|e| {
-            RoxyError::Internal(format!("failed to parse response: {}", e))
-        })
+        response
+            .json()
+            .await
+            .map_err(|e| RoxyError::Internal(format!("failed to parse response: {}", e)))
     }
 }
 
@@ -106,8 +103,7 @@ impl Backend for HttpBackend {
                 Err(e) => {
                     last_error = Some(e);
                     if attempt < self.config.max_retries {
-                        let backoff =
-                            Duration::from_millis((2u64.pow(attempt) * 100).min(3000));
+                        let backoff = Duration::from_millis((2u64.pow(attempt) * 100).min(3000));
                         tokio::time::sleep(backoff).await;
                     }
                 }
@@ -118,16 +114,10 @@ impl Backend for HttpBackend {
     }
 
     fn health_status(&self) -> HealthStatus {
-        self.health
-            .try_read()
-            .map(|h| h.status())
-            .unwrap_or(HealthStatus::Healthy)
+        self.health.try_read().map(|h| h.status()).unwrap_or(HealthStatus::Healthy)
     }
 
     fn latency_ema(&self) -> Duration {
-        self.health
-            .try_read()
-            .map(|h| h.latency_ema())
-            .unwrap_or(Duration::ZERO)
+        self.health.try_read().map(|h| h.latency_ema()).unwrap_or(Duration::ZERO)
     }
 }

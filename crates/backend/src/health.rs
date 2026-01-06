@@ -1,7 +1,8 @@
 //! EMA-based health tracking.
 
-use roxy_traits::{HealthStatus, HealthTracker};
 use std::time::{Duration, Instant};
+
+use roxy_traits::{HealthStatus, HealthTracker};
 
 /// Configuration for health tracking.
 #[derive(Debug, Clone)]
@@ -75,9 +76,7 @@ impl HealthTracker for EmaHealthTracker {
         if error_rate >= self.config.unhealthy_error_rate {
             HealthStatus::Unhealthy { error_rate }
         } else if self.latency_ema >= self.config.degraded_latency {
-            HealthStatus::Degraded {
-                latency_ema: self.latency_ema,
-            }
+            HealthStatus::Degraded { latency_ema: self.latency_ema }
         } else {
             HealthStatus::Healthy
         }
@@ -130,10 +129,7 @@ mod tests {
 
     #[test]
     fn test_error_rate_below_min_requests() {
-        let config = HealthConfig {
-            min_requests: 10,
-            ..Default::default()
-        };
+        let config = HealthConfig { min_requests: 10, ..Default::default() };
         let mut tracker = EmaHealthTracker::new(config);
 
         // Record some failures but below min_requests threshold
@@ -147,10 +143,7 @@ mod tests {
 
     #[test]
     fn test_error_rate_above_min_requests() {
-        let config = HealthConfig {
-            min_requests: 5,
-            ..Default::default()
-        };
+        let config = HealthConfig { min_requests: 5, ..Default::default() };
         let mut tracker = EmaHealthTracker::new(config);
 
         // Record 5 successes and 5 failures

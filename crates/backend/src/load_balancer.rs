@@ -1,8 +1,11 @@
 //! Load balancer implementations.
 
+use std::sync::{
+    Arc,
+    atomic::{AtomicUsize, Ordering},
+};
+
 use roxy_traits::{Backend, LoadBalancer};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 
 /// EMA-based load balancer - lower latency = higher priority.
 #[derive(Debug, Default)]
@@ -33,9 +36,7 @@ pub struct RoundRobinBalancer {
 impl RoundRobinBalancer {
     /// Create a new round-robin balancer.
     pub const fn new() -> Self {
-        Self {
-            index: AtomicUsize::new(0),
-        }
+        Self { index: AtomicUsize::new(0) }
     }
 }
 
@@ -70,12 +71,14 @@ impl LoadBalancer for RoundRobinBalancer {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::time::Duration;
+
     use alloy_json_rpc::{RequestPacket, ResponsePacket};
     use async_trait::async_trait;
     use roxy_traits::HealthStatus;
     use roxy_types::RoxyError;
-    use std::time::Duration;
+
+    use super::*;
 
     /// Mock backend for testing.
     struct MockBackend {

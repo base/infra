@@ -1,7 +1,8 @@
 //! Byzantine-safe tip tracker.
 
-use alloy_primitives::BlockNumber;
 use std::collections::{BTreeMap, HashMap};
+
+use alloy_primitives::BlockNumber;
 
 /// Byzantine-safe tip tracker.
 ///
@@ -21,12 +22,7 @@ impl SafeTip {
     ///
     /// * `f` - Maximum number of Byzantine faulty backends.
     pub fn new(f: usize) -> Self {
-        Self {
-            tips: HashMap::new(),
-            hi: BTreeMap::new(),
-            lo: BTreeMap::new(),
-            f,
-        }
+        Self { tips: HashMap::new(), hi: BTreeMap::new(), lo: BTreeMap::new(), f }
     }
 
     /// Update a backend's reported block height.
@@ -51,12 +47,7 @@ impl SafeTip {
 
     /// Get latest reported tip (any backend).
     pub fn latest(&self) -> BlockNumber {
-        self.hi
-            .keys()
-            .max()
-            .or_else(|| self.lo.keys().max())
-            .copied()
-            .unwrap_or_default()
+        self.hi.keys().max().or_else(|| self.lo.keys().max()).copied().unwrap_or_default()
     }
 
     fn remove_from_heaps(&mut self, height: BlockNumber) {

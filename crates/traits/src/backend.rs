@@ -1,10 +1,11 @@
 //! Backend traits for RPC forwarding and health tracking.
 
+use std::time::{Duration, Instant};
+
 use alloy_json_rpc::{RequestPacket, ResponsePacket};
 use alloy_primitives::BlockNumber;
 use async_trait::async_trait;
 use roxy_types::RoxyError;
-use std::time::{Duration, Instant};
 
 /// Health status of a backend.
 #[derive(Debug, Clone, Copy)]
@@ -48,10 +49,7 @@ pub trait Backend: Send + Sync + 'static {
 
     /// Whether backend should receive requests.
     fn is_healthy(&self) -> bool {
-        matches!(
-            self.health_status(),
-            HealthStatus::Healthy | HealthStatus::Degraded { .. }
-        )
+        matches!(self.health_status(), HealthStatus::Healthy | HealthStatus::Degraded { .. })
     }
 }
 

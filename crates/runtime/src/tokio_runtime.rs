@@ -1,10 +1,13 @@
 //! Tokio-based runtime implementation.
 
+use std::{
+    future::Future,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
 use derive_more::Debug;
 use roxy_traits::{Clock, Handle, Signal, Spawner};
-use std::future::Future;
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 use tokio::sync::watch;
 
 /// Tokio-based runtime context.
@@ -21,11 +24,7 @@ impl TokioContext {
     /// Create a new Tokio context.
     pub fn new() -> Self {
         let (stop_tx, stop_rx) = watch::channel(None);
-        Self {
-            label: String::new(),
-            stop_tx: Arc::new(stop_tx),
-            stop_rx,
-        }
+        Self { label: String::new(), stop_tx: Arc::new(stop_tx), stop_rx }
     }
 }
 

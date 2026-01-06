@@ -78,10 +78,7 @@ pub struct ConnectionStateMachine {
 impl ConnectionStateMachine {
     /// Create a new connection state machine.
     pub const fn new(config: ConnectionConfig) -> Self {
-        Self {
-            state: ConnectionState::Connecting { attempts: 0 },
-            config,
-        }
+        Self { state: ConnectionState::Connecting { attempts: 0 }, config }
     }
 
     /// Get the current state.
@@ -102,10 +99,9 @@ impl ConnectionStateMachine {
     /// Record a connection/request failure.
     pub fn on_failure(&mut self) {
         self.state = match self.state {
-            ConnectionState::Connected => ConnectionState::Disconnected {
-                since: Instant::now(),
-                failures: 1,
-            },
+            ConnectionState::Connected => {
+                ConnectionState::Disconnected { since: Instant::now(), failures: 1 }
+            }
             ConnectionState::Connecting { attempts } => {
                 let new_attempts = attempts + 1;
                 if new_attempts >= self.config.max_retries {
@@ -114,9 +110,7 @@ impl ConnectionStateMachine {
                         failures: new_attempts,
                     }
                 } else {
-                    ConnectionState::Connecting {
-                        attempts: new_attempts,
-                    }
+                    ConnectionState::Connecting { attempts: new_attempts }
                 }
             }
             ConnectionState::Disconnected { failures, .. } => {
@@ -127,10 +121,7 @@ impl ConnectionStateMachine {
                         failures: new_failures,
                     }
                 } else {
-                    ConnectionState::Disconnected {
-                        since: Instant::now(),
-                        failures: new_failures,
-                    }
+                    ConnectionState::Disconnected { since: Instant::now(), failures: new_failures }
                 }
             }
             ConnectionState::Banned { failures, .. } => {
@@ -146,11 +137,9 @@ impl ConnectionStateMachine {
     /// Get the backoff duration before next retry.
     pub fn backoff_duration(&self) -> Duration {
         match self.state {
-            ConnectionState::Connecting { attempts } | ConnectionState::Disconnected { failures: attempts, .. } => {
-                let delay = self
-                    .config
-                    .base_delay
-                    .saturating_mul(2u32.saturating_pow(attempts));
+            ConnectionState::Connecting { attempts }
+            | ConnectionState::Disconnected { failures: attempts, .. } => {
+                let delay = self.config.base_delay.saturating_mul(2u32.saturating_pow(attempts));
                 delay.min(self.config.max_delay)
             }
             ConnectionState::Banned { until, .. } => {
@@ -206,10 +195,7 @@ mod tests {
 
     #[test]
     fn test_repeated_failures_lead_to_ban() {
-        let config = ConnectionConfig {
-            max_retries: 3,
-            ..Default::default()
-        };
+        let config = ConnectionConfig { max_retries: 3, ..Default::default() };
         let mut sm = ConnectionStateMachine::new(config);
 
         sm.on_failure(); // attempts: 1

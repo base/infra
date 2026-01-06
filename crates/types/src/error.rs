@@ -1,8 +1,9 @@
 //! Error types for the Roxy proxy.
 
+use std::time::Duration;
+
 use alloy_json_rpc::ErrorPayload;
 use derive_more::{Debug, Display, Error};
-use std::time::Duration;
 
 /// Custom error codes for Roxy proxy.
 pub mod error_codes {
@@ -75,17 +76,15 @@ impl RoxyError {
 
     /// Whether this error should trigger failover to next backend.
     pub const fn should_failover(&self) -> bool {
-        matches!(
-            self,
-            Self::BackendOffline { .. } | Self::BackendTimeout { .. }
-        )
+        matches!(self, Self::BackendOffline { .. } | Self::BackendTimeout { .. })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use rstest::rstest;
+
+    use super::*;
 
     /// Test that should_failover returns the expected value for each error type.
     #[rstest]
@@ -134,9 +133,7 @@ mod tests {
     #[case::secondary("secondary")]
     #[case::node_1("node-1")]
     fn test_backend_offline_payload_contains_name(#[case] backend_name: &str) {
-        let err = RoxyError::BackendOffline {
-            backend: backend_name.to_string(),
-        };
+        let err = RoxyError::BackendOffline { backend: backend_name.to_string() };
         let payload = err.to_error_payload();
         assert!(
             payload.message.contains(backend_name),

@@ -3,6 +3,8 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-mod tokio_runtime;
+mod deterministic;
+pub use deterministic::DeterministicContext;
 
+mod tokio_runtime;
 pub use tokio_runtime::TokioContext;

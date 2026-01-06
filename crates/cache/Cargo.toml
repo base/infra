@@ -16,8 +16,15 @@ workspace = true
 # internal
 roxy-traits.workspace = true
 
+# alloy
+alloy-primitives.workspace = true
+
 # caching
 lru.workspace = true
+redis.workspace = true
+
+# compression
+brotli.workspace = true
 
 # async
 tokio.workspace = true
@@ -25,6 +32,8 @@ tokio.workspace = true
 # misc
 bytes.workspace = true
 tracing.workspace = true
+serde_json.workspace = true
+derive_more.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

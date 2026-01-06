@@ -8,10 +8,9 @@ pub use alloy_json_rpc::{
     ErrorPayload, Id, Request, RequestMeta, RequestPacket, Response, ResponsePacket,
     ResponsePayload, RpcError,
 };
-
 // Re-export alloy primitives for block types
-pub use alloy_primitives::{Address, BlockHash, BlockNumber, B256};
+pub use alloy_primitives::{Address, B256, BlockHash, BlockNumber};
 
 // Export our custom error type
 mod error;
-pub use error::{error_codes, RoxyError};
+pub use error::{RoxyError, error_codes};

@@ -1,7 +1,8 @@
 //! Load balancer traits for backend selection.
 
-use crate::backend::Backend;
 use std::sync::Arc;
+
+use crate::backend::Backend;
 
 /// Load balancer trait for selecting backends.
 pub trait LoadBalancer: Send + Sync {

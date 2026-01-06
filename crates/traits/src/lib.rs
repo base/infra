@@ -9,8 +9,16 @@ pub use backend::{Backend, ConsensusTracker, HealthStatus, HealthTracker};
 mod cache;
 pub use cache::{Cache, CacheError};
 
+mod codec;
+pub use codec::{CodecConfig, CodecError, Decode, DefaultCodecConfig, Encode};
+
 mod load_balancer;
 pub use load_balancer::LoadBalancer;
 
+mod rate_limiter;
+pub use rate_limiter::{RateLimitError, RateLimitResult, RateLimiter};
+
 mod runtime;
-pub use runtime::{Clock, Counter, Gauge, Handle, Histogram, JoinError, Signal, Spawner};
+pub use runtime::{
+    Clock, Counter, Gauge, Handle, Histogram, JoinError, MetricsRegistry, Signal, Spawner,
+};

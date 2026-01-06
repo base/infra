@@ -1,10 +1,11 @@
 //! Backend group with failover.
 
+use std::sync::Arc;
+
 use alloy_json_rpc::{RequestPacket, ResponsePacket};
 use derive_more::Debug;
 use roxy_traits::{Backend, LoadBalancer};
 use roxy_types::RoxyError;
-use std::sync::Arc;
 
 /// Response from a backend group.
 #[derive(Debug)]
@@ -32,11 +33,7 @@ impl BackendGroup {
         backends: Vec<Arc<dyn Backend>>,
         load_balancer: Arc<dyn LoadBalancer>,
     ) -> Self {
-        Self {
-            name,
-            backends,
-            load_balancer,
-        }
+        Self { name, backends, load_balancer }
     }
 
     /// Get the group name.
@@ -55,10 +52,7 @@ impl BackendGroup {
         for backend in ordered {
             match backend.forward(request.clone()).await {
                 Ok(response) => {
-                    return Ok(BackendResponse {
-                        response,
-                        served_by: backend.name().to_string(),
-                    });
+                    return Ok(BackendResponse { response, served_by: backend.name().to_string() });
                 }
                 Err(e) if e.should_failover() => {
                     continue;

@@ -1,8 +1,9 @@
 //! Cache traits for RPC response caching.
 
+use std::time::Duration;
+
 use bytes::Bytes;
 use derive_more::{Debug, Display, Error};
-use std::time::Duration;
 
 /// Error type for cache operations.
 #[derive(Debug, Display, Error)]
@@ -27,8 +28,6 @@ pub trait Cache: Send + Sync + 'static {
     ) -> impl std::future::Future<Output = Result<(), CacheError>> + Send;
 
     /// Delete a value from the cache.
-    fn delete(
-        &self,
-        key: &str,
-    ) -> impl std::future::Future<Output = Result<(), CacheError>> + Send;
+    fn delete(&self, key: &str)
+    -> impl std::future::Future<Output = Result<(), CacheError>> + Send;
 }
