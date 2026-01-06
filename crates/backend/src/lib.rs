@@ -3,7 +3,6 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-// Placeholder import for tracing (will be used when logging is added)
 use tracing as _;
 
 mod connection;

@@ -1,11 +1,4 @@
-# roxy-cache
+# Cache for Roxy
 
-Cache implementations for the Roxy RPC proxy.
-
-## Overview
-
-This crate provides cache implementations for RPC response caching.
-
-## Implementations
-
-- `MemoryCache` - In-memory LRU cache with TTL support
+Cache implementations including in-memory LRU, Redis, compressed caching,
+fallback chains, and RPC-specific caching with configurable TTL policies.

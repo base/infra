@@ -1,11 +1,4 @@
-# roxy-runtime
+# Runtime for Roxy
 
-Runtime implementations for the Roxy RPC proxy.
-
-## Overview
-
-This crate provides concrete implementations of the runtime traits.
-
-## Implementations
-
-- `TokioContext` - Production runtime based on Tokio
+Runtime implementations for the Roxy RPC proxy including TokioContext
+for production and DeterministicContext for testing.

@@ -76,3 +76,19 @@ watch-test:
 # Watches checks
 watch-check:
     cargo watch -x "fmt --all -- --check" -x "clippy --all-targets -- -D warnings" -x test
+
+# Run all benchmarks
+bench:
+    cargo bench --workspace
+
+# Run specific benchmark
+bench-one name:
+    cargo bench --bench {{name}}
+
+# Run fuzz testing (requires cargo-fuzz and nightly Rust)
+fuzz target="fuzz_codec_decode" duration="60":
+    cd fuzz && cargo +nightly fuzz run {{target}} -- -max_total_time={{duration}}
+
+# List fuzz targets
+fuzz-list:
+    cd fuzz && cargo +nightly fuzz list

@@ -118,7 +118,7 @@ pub trait Encode {
     /// Encode into bytes.
     fn encode(&self) -> Result<Bytes, CodecError>;
 
-    /// Encode into a Vec<u8>.
+    /// Encode into a `Vec<u8>`.
     fn encode_vec(&self) -> Result<Vec<u8>, CodecError> {
         self.encode().map(|b| b.to_vec())
     }

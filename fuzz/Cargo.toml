@@ -1,0 +1,28 @@
+[package]
+name = "roxy-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+roxy-rpc = { path = "../crates/rpc" }
+roxy-traits = { path = "../crates/traits" }
+
+[[bin]]
+name = "fuzz_codec_decode"
+path = "fuzz_targets/fuzz_codec_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_codec_batch"
+path = "fuzz_targets/fuzz_codec_batch.rs"
+test = false
+doc = false
+bench = false

@@ -22,6 +22,7 @@ alloy-json-rpc.workspace = true
 
 # async
 tokio.workspace = true
+async-trait = "0.1"
 
 # serialization
 serde_json.workspace = true

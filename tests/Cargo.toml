@@ -1,0 +1,54 @@
+[package]
+name = "roxy-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+publish = false
+
+# Disable auto-discovery of tests in the root
+# We define them explicitly below
+autobenches = false
+autotests = false
+
+[lib]
+path = "lib.rs"
+doctest = false
+
+[[test]]
+name = "integration_test"
+path = "integration_test.rs"
+
+[[test]]
+name = "codec_integration"
+path = "codec_integration.rs"
+
+[[test]]
+name = "cache_integration"
+path = "cache_integration.rs"
+
+[[test]]
+name = "config_integration"
+path = "config_integration.rs"
+
+[dependencies]
+# Local crates
+roxy-backend = { workspace = true }
+roxy-cache = { workspace = true }
+roxy-config = { workspace = true }
+roxy-rpc = { workspace = true }
+roxy-server = { workspace = true }
+roxy-traits = { workspace = true }
+roxy-test-utils = { workspace = true }
+
+# Runtime
+tokio = { workspace = true }
+
+# Serialization
+bytes = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

@@ -13,24 +13,37 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-# internal
+roxy-cli.workspace = true
 roxy-config.workspace = true
-roxy-server.workspace = true
-roxy-backend.workspace = true
-roxy-runtime.workspace = true
 
-# async
 tokio.workspace = true
-
-# cli
-clap = { version = "4.5", features = ["derive"] }
-
-# logging
-tracing.workspace = true
-tracing-subscriber.workspace = true
-
-# error handling
 eyre.workspace = true
+tracing.workspace = true
+clap = { version = "4.5", features = ["derive"] }
 
 [features]
 default = []
+
+[dev-dependencies]
+criterion.workspace = true
+serde_json.workspace = true
+bytes.workspace = true
+roxy-rpc.workspace = true
+roxy-cache.workspace = true
+roxy-traits.workspace = true
+
+[[bench]]
+name = "codec_bench"
+harness = false
+
+[[bench]]
+name = "cache_bench"
+harness = false
+
+[[bench]]
+name = "router_bench"
+harness = false
+
+[[bench]]
+name = "rate_limiter_bench"
+harness = false

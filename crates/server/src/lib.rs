@@ -3,17 +3,31 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
-// Placeholder imports for dependencies that will be used when this crate is implemented
-use alloy_json_rpc as _;
-use axum as _;
 use hyper as _;
-use roxy_backend as _;
-use roxy_traits as _;
 use roxy_types as _;
-use serde as _;
-use serde_json as _;
-use tokio as _;
 use tower as _;
-use tracing as _;
 
-// Server modules will be added here
+mod error;
+pub use error::ServerError;
+
+mod http;
+pub use http::{HttpAppState, create_router, handle_rpc, health_check};
+
+mod metrics;
+pub use metrics::{
+    MetricsConfig, RoxyMetrics, metrics_handler, metrics_middleware, record_backend_error,
+    record_backend_latency, record_backend_request, record_cache_access, record_latency,
+    record_rate_limit, record_request, record_request_result, set_active_connections,
+    set_active_subscriptions, set_backend_health, set_cache_size,
+};
+
+mod state;
+pub use state::ServerBuilder;
+
+mod websocket;
+// Re-export for convenience
+pub use axum::Router;
+pub use websocket::{
+    AppState, ConnectionGuard, ConnectionTracker, SubscriptionHandle, SubscriptionManager,
+    SubscriptionParams, WsError, WsNotification, WsRequest, WsResponse, ws_handler,
+};

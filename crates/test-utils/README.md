@@ -1,13 +1,4 @@
-# roxy-test-utils
+# Test Utilities for Roxy
 
-Test utilities for the Roxy RPC proxy.
-
-## Overview
-
-This crate provides test fixtures and mock implementations.
-
-## Components (Planned)
-
-- Mock backends
-- Test fixtures
-- Deterministic runtime
+Shared testing utilities including mock backends, request and response
+builders, JSON-RPC fixtures, and async test helpers.

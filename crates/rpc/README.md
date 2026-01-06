@@ -1,14 +1,4 @@
-# roxy-rpc
+# RPC for Roxy
 
-RPC handling for the Roxy RPC proxy.
-
-## Overview
-
-This crate provides RPC request handling, routing, and rate limiting.
-
-## Components (Planned)
-
-- Request validation
-- Method routing
-- Rate limiting
-- Request/response transformation
+RPC handling including JSON-RPC codec, method routing, request validation,
+and sliding window rate limiting.

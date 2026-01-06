@@ -17,6 +17,8 @@ workspace = true
 roxy-types.workspace = true
 roxy-traits.workspace = true
 roxy-backend.workspace = true
+roxy-rpc.workspace = true
+roxy-cache.workspace = true
 
 # alloy
 alloy-json-rpc.workspace = true
@@ -28,13 +30,20 @@ hyper.workspace = true
 
 # async
 tokio.workspace = true
+futures-util = "0.3"
 
 # serialization
 serde.workspace = true
 serde_json.workspace = true
+bytes.workspace = true
 
 # misc
 tracing.workspace = true
+eyre.workspace = true
+
+# metrics
+metrics.workspace = true
+metrics-exporter-prometheus = "0.17"
 
 [dev-dependencies]
 rstest.workspace = true

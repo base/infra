@@ -8,8 +8,9 @@ repository = "https://github.com/base/roxy"
 
 [workspace]
 resolver = "2"
-members = ["bin/*", "crates/*"]
+members = ["bin/*", "crates/*", "tests"]
 default-members = ["bin/roxy"]
+exclude = ["fuzz"]
 
 [workspace.metadata.cargo-udeps.ignore]
 normal = ["rustls-platform-verifier"]
@@ -60,6 +61,7 @@ roxy-rpc = { path = "crates/rpc" }
 roxy-server = { path = "crates/server" }
 roxy-config = { path = "crates/config" }
 roxy-test-utils = { path = "crates/test-utils" }
+roxy-cli = { path = "crates/cli" }
 
 # alloy - Ethereum primitives and JSON-RPC types
 alloy-primitives = "1.4"
@@ -71,7 +73,7 @@ tokio-stream = "0.1"
 
 # networking
 hyper = "1.0"
-axum = "0.7"
+axum = { version = "0.7", features = ["ws"] }
 reqwest = { version = "0.12", features = ["json"] }
 tower = "0.4"
 
@@ -104,4 +106,7 @@ toml = "0.8"
 
 # testing
 rstest = "0.23"
-criterion = "0.5"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+# fuzzing
+arbitrary = { version = "1", features = ["derive"] }

@@ -1,17 +1,9 @@
 # Roxy
 
-High-performance Ethereum JSON-RPC proxy binary.
+This is the main entry point for running the Roxy RPC proxy server.
 
 ## Usage
 
 ```bash
 roxy --config config.toml
 ```
-
-## Features
-
-- Load balancing across multiple backends
-- Byzantine-safe consensus tracking
-- Tiered caching (memory + Redis)
-- Rate limiting
-- WebSocket support
