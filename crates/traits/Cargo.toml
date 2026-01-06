@@ -1,0 +1,32 @@
+[package]
+name = "roxy-traits"
+description = "Core traits for Roxy RPC proxy"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# internal
+roxy-types.workspace = true
+
+# alloy
+alloy-json-rpc.workspace = true
+alloy-primitives.workspace = true
+
+# async
+tokio.workspace = true
+async-trait = "0.1"
+
+# misc
+bytes.workspace = true
+derive_more.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true

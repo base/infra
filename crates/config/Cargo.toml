@@ -1,0 +1,24 @@
+[package]
+name = "roxy-config"
+description = "Configuration for Roxy RPC proxy"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# serialization
+serde.workspace = true
+toml.workspace = true
+
+# error handling
+eyre.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true

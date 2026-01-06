@@ -1,0 +1,24 @@
+[package]
+name = "roxy-types"
+description = "Core types for Roxy RPC proxy"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# alloy types
+alloy-json-rpc.workspace = true
+alloy-primitives.workspace = true
+
+# derive macros
+derive_more.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
