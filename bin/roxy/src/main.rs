@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use eyre::{Context, Result};
-use roxy_cli::{Cli, build_app, init_tracing, log_config_summary};
+use roxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
 use roxy_config::RoxyConfig;
 
 /// Main entry point for the Roxy RPC proxy.
@@ -18,12 +18,9 @@ async fn main() -> Result<()> {
     let config = RoxyConfig::from_file(&cli.config)
         .wrap_err_with(|| format!("failed to load config from {}", cli.config.display()))?;
 
-    if cli.check {
-        println!("Configuration is valid");
-        return Ok(());
-    }
+    check_config!(cli);
 
-    log_config_summary(&config);
+    Logger::new().log(&config);
 
     let app = build_app(&config).await?;
     roxy_cli::run_server(app, &config).await

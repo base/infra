@@ -10,6 +10,37 @@ pub use clap;
 use clap::Parser;
 pub use eyre;
 use eyre::{Context, Result};
+
+/// Macro to check CLI configuration and exit early if the check flag is set.
+///
+/// This macro handles the common pattern of validating configuration and exiting
+/// early when the `--check` flag is passed to the CLI. It prints a success message
+/// and returns `Ok(())` if the check flag is set.
+///
+/// # Example
+///
+/// ```ignore
+/// use roxy_cli::{Cli, check_config};
+/// use clap::Parser;
+///
+/// #[tokio::main]
+/// async fn main() -> eyre::Result<()> {
+///     let cli = Cli::parse();
+///     // ... load config ...
+///     check_config!(cli);
+///     // ... continue with server startup ...
+///     Ok(())
+/// }
+/// ```
+#[macro_export]
+macro_rules! check_config {
+    ($cli:expr) => {
+        if $cli.check {
+            println!("Configuration is valid");
+            return Ok(());
+        }
+    };
+}
 use roxy_backend::{
     BackendConfig as HttpBackendConfig, BackendGroup, EmaLoadBalancer, HttpBackend,
     RoundRobinBalancer,
@@ -63,67 +94,88 @@ pub fn init_tracing(level: &str) -> Result<()> {
     Ok(())
 }
 
+/// A logger for Roxy configuration.
+///
+/// Provides methods for logging configuration summaries at startup.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Logger;
+
+impl Logger {
+    /// Create a new Logger instance.
+    pub const fn new() -> Self {
+        Self
+    }
+
+    /// Log a summary of the configuration at startup.
+    pub fn log(&self, config: &RoxyConfig) {
+        tracing::info!(
+            host = %config.server.host,
+            port = config.server.port,
+            max_connections = config.server.max_connections,
+            "Server configuration"
+        );
+
+        tracing::info!(count = config.backends.len(), "Backends configured");
+
+        for backend in &config.backends {
+            tracing::debug!(
+                name = %backend.name,
+                url = %backend.url,
+                weight = backend.weight,
+                "Backend"
+            );
+        }
+
+        tracing::info!(count = config.groups.len(), "Backend groups configured");
+
+        for group in &config.groups {
+            tracing::debug!(
+                name = %group.name,
+                backends = ?group.backends,
+                load_balancer = %group.load_balancer,
+                "Group"
+            );
+        }
+
+        if config.cache.enabled {
+            tracing::info!(
+                memory_size = config.cache.memory_size,
+                default_ttl_ms = config.cache.default_ttl_ms,
+                "Cache enabled"
+            );
+        }
+
+        if config.rate_limit.enabled {
+            tracing::info!(
+                requests_per_second = config.rate_limit.requests_per_second,
+                burst_size = config.rate_limit.burst_size,
+                "Rate limiting enabled"
+            );
+        }
+
+        if !config.routing.blocked_methods.is_empty() {
+            tracing::info!(
+                methods = ?config.routing.blocked_methods,
+                "Blocked methods"
+            );
+        }
+
+        if config.metrics.enabled {
+            tracing::info!(
+                host = %config.metrics.host,
+                port = config.metrics.port,
+                "Metrics enabled"
+            );
+        }
+    }
+}
+
 /// Log a summary of the configuration at startup.
+///
+/// This is a convenience function that creates a [`Logger`] and calls [`Logger::log`].
+#[deprecated(since = "0.1.0", note = "Use Logger::new().log(&config) instead")]
 pub fn log_config_summary(config: &RoxyConfig) {
-    tracing::info!(
-        host = %config.server.host,
-        port = config.server.port,
-        max_connections = config.server.max_connections,
-        "Server configuration"
-    );
-
-    tracing::info!(count = config.backends.len(), "Backends configured");
-
-    for backend in &config.backends {
-        tracing::debug!(
-            name = %backend.name,
-            url = %backend.url,
-            weight = backend.weight,
-            "Backend"
-        );
-    }
-
-    tracing::info!(count = config.groups.len(), "Backend groups configured");
-
-    for group in &config.groups {
-        tracing::debug!(
-            name = %group.name,
-            backends = ?group.backends,
-            load_balancer = %group.load_balancer,
-            "Group"
-        );
-    }
-
-    if config.cache.enabled {
-        tracing::info!(
-            memory_size = config.cache.memory_size,
-            default_ttl_ms = config.cache.default_ttl_ms,
-            "Cache enabled"
-        );
-    }
-
-    if config.rate_limit.enabled {
-        tracing::info!(
-            requests_per_second = config.rate_limit.requests_per_second,
-            burst_size = config.rate_limit.burst_size,
-            "Rate limiting enabled"
-        );
-    }
-
-    if !config.routing.blocked_methods.is_empty() {
-        tracing::info!(
-            methods = ?config.routing.blocked_methods,
-            "Blocked methods"
-        );
-    }
-
-    if config.metrics.enabled {
-        tracing::info!(
-            host = %config.metrics.host,
-            port = config.metrics.port,
-            "Metrics enabled"
-        );
-    }
+    Logger.log(config);
 }
 
 /// Build the application router from configuration.
