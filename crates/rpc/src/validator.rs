@@ -170,7 +170,7 @@ impl ValidatorChain {
                     current_request = modified_request;
                 }
                 ValidationResult::Invalid(error) => {
-                    tracing::debug!(
+                    debug!(
                         validator = validator.name(),
                         error = %error,
                         "request rejected by validator"

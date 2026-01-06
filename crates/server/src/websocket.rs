@@ -312,7 +312,7 @@ impl SubscriptionManager {
         loop {
             tokio::select! {
                 _ = &mut cancel => {
-                    tracing::debug!(subscription_id = %id, "Subscription cancelled");
+                    debug!(subscription_id = %id, "Subscription cancelled");
                     break;
                 }
                 _ = interval.tick() => {
@@ -484,11 +484,11 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>, _guard: Connecti
                     // Ignore pong messages
                 }
                 Ok(Message::Close(_)) => {
-                    tracing::debug!("WebSocket close received");
+                    debug!("WebSocket close received");
                     break;
                 }
                 Err(e) => {
-                    tracing::error!("WebSocket error: {}", e);
+                    error!("WebSocket error: {}", e);
                     break;
                 }
             }
@@ -498,16 +498,16 @@ async fn handle_socket(socket: WebSocket, state: Arc<AppState>, _guard: Connecti
     // Wait for either task to complete
     tokio::select! {
         _ = send_task => {
-            tracing::debug!("Send task completed");
+            debug!("Send task completed");
         }
         _ = recv_task => {
-            tracing::debug!("Receive task completed");
+            debug!("Receive task completed");
         }
     }
 
     // Clean up subscriptions
     sub_manager.write().await.close_all();
-    tracing::debug!("WebSocket connection closed");
+    debug!("WebSocket connection closed");
 }
 
 /// Handle a single incoming message.

@@ -3,9 +3,11 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+#[macro_use]
+extern crate tracing;
+
 use alloy_json_rpc as _;
 use roxy_types as _;
-use tracing as _;
 
 mod codec;
 pub use codec::{

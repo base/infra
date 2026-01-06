@@ -2,6 +2,9 @@
 //!
 //! This binary provides the main entry point for running the Roxy RPC proxy server.
 
+#[macro_use]
+extern crate tracing;
+
 use clap::Parser;
 use eyre::{Context, Result};
 use roxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
@@ -14,7 +17,7 @@ async fn main() -> Result<()> {
 
     init_tracing(&cli.log_level)?;
 
-    tracing::info!(config_path = %cli.config.display(), "Loading configuration");
+    info!(config_path = %cli.config.display(), "Loading configuration");
     let config = RoxyConfig::from_file(&cli.config)
         .wrap_err_with(|| format!("failed to load config from {}", cli.config.display()))?;
 

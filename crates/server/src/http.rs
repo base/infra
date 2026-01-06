@@ -23,6 +23,7 @@ use roxy_rpc::{
 use roxy_traits::{Cache, RateLimitResult, RateLimiter};
 use serde_json::value::RawValue;
 
+use crate::Span;
 use crate::error::ServerError;
 
 /// Default header for client identification in rate limiting.
@@ -181,14 +182,14 @@ pub async fn handle_rpc<C: Cache>(
 ) -> impl IntoResponse {
     // 1. Extract client identifier
     let client_id = extract_client_id(&headers);
-    tracing::Span::current().record("client_id", client_id);
+    Span::current().record("client_id", client_id);
 
     // 2. Check rate limit
     if let Some(rate_limiter) = &state.rate_limiter {
         match rate_limiter.check_and_record(client_id) {
             RateLimitResult::Allowed => {}
             RateLimitResult::Limited { retry_after } => {
-                tracing::warn!(client_id, ?retry_after, "rate limited");
+                warn!(client_id, ?retry_after, "rate limited");
                 return ServerError::rate_limited(retry_after).into_response();
             }
         }
@@ -198,7 +199,7 @@ pub async fn handle_rpc<C: Cache>(
     let packet = match state.codec.decode_bytes(&body) {
         Ok(p) => p,
         Err(e) => {
-            tracing::warn!(error = %e, "failed to decode request");
+            warn!(error = %e, "failed to decode request");
             return ServerError::invalid_request(e.to_string()).into_response();
         }
     };
@@ -223,7 +224,7 @@ pub async fn handle_rpc<C: Cache>(
     let response_bytes = match state.codec.encode_response(&response_packet) {
         Ok(bytes) => bytes,
         Err(e) => {
-            tracing::error!(error = %e, "failed to encode response");
+            error!(error = %e, "failed to encode response");
             return ServerError::internal(e.to_string()).into_response();
         }
     };
@@ -248,7 +249,7 @@ async fn process_single_request<C: Cache>(
     let validated_request = match state.validators.validate(request) {
         ValidationResult::Valid(req) => req,
         ValidationResult::Invalid(err) => {
-            tracing::debug!(method = %method, code = err.code, "validation failed");
+            debug!(method = %method, code = err.code, "validation failed");
             return ParsedResponse::error(request_id, JsonRpcError::new(err.code, err.message));
         }
     };
@@ -258,7 +259,7 @@ async fn process_single_request<C: Cache>(
 
     // Check if method is blocked
     if route_target.is_blocked() {
-        tracing::debug!(method = %method, "method blocked");
+        debug!(method = %method, "method blocked");
         return ParsedResponse::error(request_id, JsonRpcError::method_not_found());
     }
 
@@ -270,7 +271,7 @@ async fn process_single_request<C: Cache>(
             if let Some(name) = state.groups.keys().next() {
                 name.clone()
             } else {
-                tracing::error!("no backend groups configured");
+                error!("no backend groups configured");
                 return ParsedResponse::error(request_id, JsonRpcError::internal_error());
             }
         }
@@ -283,7 +284,7 @@ async fn process_single_request<C: Cache>(
     let group = match state.get_group(&group_name) {
         Some(g) => g,
         None => {
-            tracing::error!(group = %group_name, "backend group not found");
+            error!(group = %group_name, "backend group not found");
             return ParsedResponse::error(request_id, JsonRpcError::internal_error());
         }
     };
@@ -292,18 +293,18 @@ async fn process_single_request<C: Cache>(
     let request_packet = match create_request_packet(&validated_request) {
         Ok(packet) => packet,
         Err(e) => {
-            tracing::error!(error = %e, "failed to serialize request");
+            error!(error = %e, "failed to serialize request");
             return ParsedResponse::error(request_id, JsonRpcError::internal_error());
         }
     };
 
     match group.forward(request_packet).await {
         Ok(BackendResponse { response, served_by }) => {
-            tracing::debug!(backend = %served_by, "request forwarded successfully");
+            debug!(backend = %served_by, "request forwarded successfully");
             convert_alloy_response(response, request_id)
         }
         Err(e) => {
-            tracing::warn!(error = %e, "backend error");
+            warn!(error = %e, "backend error");
             ParsedResponse::error(request_id, JsonRpcError::new(-32010, e.to_string()))
         }
     }

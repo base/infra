@@ -3,9 +3,13 @@
 #![cfg_attr(docsrs, feature(doc_cfg, doc_auto_cfg))]
 #![cfg_attr(not(test), warn(unused_crate_dependencies))]
 
+#[macro_use]
+extern crate tracing;
+
 use hyper as _;
 use roxy_types as _;
 use tower as _;
+use tracing::Span;
 
 mod error;
 pub use error::ServerError;
