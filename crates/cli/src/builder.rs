@@ -27,7 +27,7 @@ use crate::{
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::AppBuilder;
+/// use roxyproxy_cli::AppBuilder;
 /// use roxy_config::RoxyConfig;
 ///
 /// let config = RoxyConfig::from_file("roxy.toml")?;

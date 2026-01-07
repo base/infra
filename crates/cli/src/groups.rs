@@ -15,7 +15,7 @@ use roxy_traits::{Backend, LoadBalancer};
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::{BackendFactory, GroupFactory};
+/// use roxyproxy_cli::{BackendFactory, GroupFactory};
 ///
 /// let backends = BackendFactory::new().create(&config)?;
 /// let groups = GroupFactory::new().create(&config, &backends)?;

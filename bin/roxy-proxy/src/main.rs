@@ -7,7 +7,7 @@ extern crate tracing;
 
 use clap::Parser;
 use eyre::{Context, Result};
-use roxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
+use roxyproxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
 use roxy_config::RoxyConfig;
 
 /// Main entry point for the Roxy RPC proxy.
@@ -26,5 +26,5 @@ async fn main() -> Result<()> {
     Logger::new().log(&config);
 
     let app = build_app(&config).await?;
-    roxy_cli::run_server(app, &config).await
+    roxyproxy_cli::run_server(app, &config).await
 }

@@ -15,7 +15,7 @@ use clap::Parser;
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::{Cli, check_config};
+/// use roxyproxy_cli::{Cli, check_config};
 /// use clap::Parser;
 ///
 /// #[tokio::main]

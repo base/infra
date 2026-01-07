@@ -13,7 +13,7 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
-roxy-cli.workspace = true
+roxyproxy-cli.workspace = true
 roxy-config.workspace = true
 
 tokio.workspace = true

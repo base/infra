@@ -10,7 +10,7 @@ use roxy_rpc::{MethodRouter, RouteTarget};
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::RouterFactory;
+/// use roxyproxy_cli::RouterFactory;
 ///
 /// let router = RouterFactory::new().create(&config);
 /// ```

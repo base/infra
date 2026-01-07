@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Local crates
-roxy-cli = { path = "../../crates/cli" }
+roxyproxy-cli = { path = "../../crates/cli" }
 roxy-config = { path = "../../crates/config" }
 roxy-server = { path = "../../crates/server" }
 

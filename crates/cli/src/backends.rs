@@ -14,7 +14,7 @@ use roxy_traits::Backend;
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::BackendFactory;
+/// use roxyproxy_cli::BackendFactory;
 ///
 /// let factory = BackendFactory::new().with_batch_size(200);
 /// let backends = factory.create(&config)?;

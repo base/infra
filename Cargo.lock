@@ -2665,24 +2665,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "roxy-cli"
-version = "0.1.0"
-dependencies = [
- "axum",
- "clap",
- "eyre",
- "roxy-backend",
- "roxy-cache",
- "roxy-config",
- "roxy-rpc",
- "roxy-server",
- "roxy-traits",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "roxy-config"
 version = "0.1.0"
 dependencies = [
@@ -2699,9 +2681,9 @@ dependencies = [
  "axum",
  "eyre",
  "reqwest",
- "roxy-cli",
  "roxy-config",
  "roxy-server",
+ "roxyproxy-cli",
  "serde",
  "serde_json",
  "tokio",
@@ -2718,10 +2700,10 @@ dependencies = [
  "criterion",
  "eyre",
  "roxy-cache",
- "roxy-cli",
  "roxy-config",
  "roxy-rpc",
  "roxy-traits",
+ "roxyproxy-cli",
  "serde_json",
  "tokio",
  "tracing",
@@ -2823,6 +2805,24 @@ dependencies = [
  "alloy-primitives",
  "derive_more",
  "rstest",
+]
+
+[[package]]
+name = "roxyproxy-cli"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "clap",
+ "eyre",
+ "roxy-backend",
+ "roxy-cache",
+ "roxy-config",
+ "roxy-rpc",
+ "roxy-server",
+ "roxy-traits",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 [package]
-name = "roxy-cli"
+name = "roxyproxy-cli"
 description = "CLI utilities for Roxy RPC proxy"
 
 version.workspace = true

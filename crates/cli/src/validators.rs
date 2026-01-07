@@ -13,7 +13,7 @@ use roxy_rpc::{MethodBlocklist, RateLimiterConfig, SlidingWindowRateLimiter, Val
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::ValidatorFactory;
+/// use roxyproxy_cli::ValidatorFactory;
 ///
 /// let validators = ValidatorFactory::new().create(&config);
 /// ```
@@ -58,7 +58,7 @@ impl ValidatorFactory {
 /// # Example
 ///
 /// ```ignore
-/// use roxy_cli::RateLimiterFactory;
+/// use roxyproxy_cli::RateLimiterFactory;
 ///
 /// if let Some(limiter) = RateLimiterFactory::new().create(&config) {
 ///     // Use the rate limiter

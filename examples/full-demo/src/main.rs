@@ -71,7 +71,7 @@ async fn main() -> Result<()> {
     // Phase 2: Start roxy proxy
     output::print_phase(2, 3, "Starting roxy proxy");
     let roxy_config = demo_config.to_roxy_config();
-    let roxy_app = roxy_cli::build_app(&roxy_config).await.wrap_err("failed to build roxy app")?;
+    let roxy_app = roxyproxy_cli::build_app(&roxy_config).await.wrap_err("failed to build roxy app")?;
 
     let roxy_handle = spawn_roxy(roxy_app, &roxy_config);
     output::print_success(&format!("Roxy listening at http://127.0.0.1:{}", demo_config.roxy_port));

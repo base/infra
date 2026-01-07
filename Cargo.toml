@@ -52,16 +52,16 @@ codegen-units = 1
 
 [workspace.dependencies]
 # local crates
-roxy-types = { path = "crates/types" }
-roxy-traits = { path = "crates/traits" }
-roxy-runtime = { path = "crates/runtime" }
-roxy-backend = { path = "crates/backend" }
-roxy-cache = { path = "crates/cache" }
-roxy-rpc = { path = "crates/rpc" }
-roxy-server = { path = "crates/server" }
-roxy-config = { path = "crates/config" }
-roxy-test-utils = { path = "crates/test-utils" }
-roxy-cli = { path = "crates/cli" }
+roxy-types = { version = "0.1.0", path = "crates/types" }
+roxy-traits = { version = "0.1.0", path = "crates/traits" }
+roxy-runtime = { version = "0.1.0", path = "crates/runtime" }
+roxy-backend = { version = "0.1.0", path = "crates/backend" }
+roxy-cache = { version = "0.1.0", path = "crates/cache" }
+roxy-rpc = { version = "0.1.0", path = "crates/rpc" }
+roxy-server = { version = "0.1.0", path = "crates/server" }
+roxy-config = { version = "0.1.0", path = "crates/config" }
+roxy-test-utils = { version = "0.1.0", path = "crates/test-utils" }
+roxyproxy-cli = { version = "0.1.0", path = "crates/cli" }
 
 # alloy - Ethereum primitives and JSON-RPC types
 alloy-primitives = "1.4"
