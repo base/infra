@@ -8,7 +8,7 @@ repository = "https://github.com/base/roxy"
 
 [workspace]
 resolver = "2"
-members = ["bin/*", "crates/*", "tests"]
+members = ["bin/*", "crates/*", "tests", "examples/full-demo"]
 default-members = ["bin/roxy"]
 exclude = ["fuzz"]
 

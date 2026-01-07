@@ -92,3 +92,7 @@ fuzz target="fuzz_codec_decode" duration="60":
 # List fuzz targets
 fuzz-list:
     cd fuzz && cargo +nightly fuzz list
+
+# Run the full demo example
+demo:
+    cargo run -p roxy-full-demo
