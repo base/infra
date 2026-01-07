@@ -102,6 +102,10 @@ Validate configuration without starting:
 | routing      | Method routing rules and blocked methods       |
 | metrics      | Prometheus metrics endpoint                    |
 
+## Acknowledgments
+
+Roxy's design draws inspiration from the [commonwarexyz/monorepo](https://github.com/commonwarexyz/monorepo).
+
 ## License
 
 MIT

@@ -3,8 +3,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
-homepage = "https://github.com/base/roxy"
-repository = "https://github.com/base/roxy"
+homepage = "https://github.com/refcell/roxy"
+repository = "https://github.com/refcell/roxy"
 
 [workspace]
 resolver = "2"
