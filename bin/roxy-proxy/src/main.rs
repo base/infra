@@ -7,8 +7,8 @@ extern crate tracing;
 
 use clap::Parser;
 use eyre::{Context, Result};
-use roxyproxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
 use roxy_config::RoxyConfig;
+use roxyproxy_cli::{Cli, Logger, build_app, check_config, init_tracing};
 
 /// Main entry point for the Roxy RPC proxy.
 #[tokio::main]
