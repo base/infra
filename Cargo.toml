@@ -9,7 +9,7 @@ repository = "https://github.com/refcell/roxy"
 [workspace]
 resolver = "2"
 members = ["bin/*", "crates/*", "tests", "examples/full-demo"]
-default-members = ["bin/roxy"]
+default-members = ["bin/roxy-proxy"]
 exclude = ["fuzz"]
 
 [workspace.metadata.cargo-udeps.ignore]

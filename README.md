@@ -2,55 +2,37 @@
 
 An extensible and modular RPC request router and proxy service built in Rust.
 
-## Features
+## Demo
 
-- Load balancing across multiple RPC backends with EMA-based health tracking
-- Tiered caching with in-memory LRU and Redis support
-- Sliding window rate limiting
-- HTTP and WebSocket support
-- Method routing and request validation
-- Prometheus metrics
+<https://github.com/user-attachments/assets/3c3fa289-5a12-41ff-b556-e52e4cd1f04d>
 
-## Repository Structure
+## Overview
 
-```
-bin/
-  roxy/            Entry point for the Roxy binary
-crates/
-  backend/         HTTP backends with health tracking and load balancing
-  cache/           Memory, Redis, and fallback cache implementations
-  cli/             CLI definition and application builder
-  config/          TOML configuration parsing and validation
-  rpc/             JSON-RPC codec, routing, validation, and rate limiting
-  runtime/         Tokio and deterministic runtime implementations
-  server/          HTTP and WebSocket server with metrics
-  test-utils/      Mock backends, fixtures, and async test helpers
-  traits/          Core trait definitions for all components
-  types/           Error types and alloy re-exports
-```
+Roxy is a JSON-RPC proxy that sits between clients and upstream RPC backends. It distributes requests across multiple backends using exponential moving average (EMA) based health tracking to route traffic toward healthier endpoints. Responses can be cached in a tiered system with an in-memory LRU cache and optional Redis backing. Rate limiting uses a sliding window algorithm to control request throughput. The server accepts both HTTP and WebSocket connections and exposes Prometheus metrics for observability.
 
-## Prerequisites
-
-- Rust 1.88+
-
-## Getting Started
-
-Clone the repository:
+## Installation
 
 ```bash
-git clone https://github.com/refcell/roxy
-cd roxy
+cargo install roxy-proxy
 ```
 
-Build:
+## Usage
+
+Run the proxy with a configuration file:
 
 ```bash
-cargo build --release
+roxy-proxy --config roxy.toml
 ```
 
-## Running Roxy
+Validate configuration without starting the server:
 
-Create a configuration file:
+```bash
+roxy-proxy --config roxy.toml --check
+```
+
+## Configuration
+
+Create a TOML configuration file:
 
 ```toml
 [[backends]]
@@ -77,20 +59,6 @@ memory_size = 10000
 host = "0.0.0.0"
 port = 8545
 ```
-
-Run the proxy:
-
-```bash
-./target/release/roxy --config roxy.toml
-```
-
-Validate configuration without starting:
-
-```bash
-./target/release/roxy --config roxy.toml --check
-```
-
-## Configuration
 
 | Section      | Description                                    |
 |--------------|------------------------------------------------|

@@ -2633,24 +2633,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "roxy"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "clap",
- "criterion",
- "eyre",
- "roxy-cache",
- "roxy-cli",
- "roxy-config",
- "roxy-rpc",
- "roxy-traits",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "roxy-backend"
 version = "0.1.0"
 dependencies = [
@@ -2725,6 +2707,24 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "roxy-proxy"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "clap",
+ "criterion",
+ "eyre",
+ "roxy-cache",
+ "roxy-cli",
+ "roxy-config",
+ "roxy-rpc",
+ "roxy-traits",
+ "serde_json",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

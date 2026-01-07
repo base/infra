@@ -1,5 +1,5 @@
 [package]
-name = "roxy"
+name = "roxy-proxy"
 description = "High-performance Ethereum JSON-RPC proxy"
 
 version.workspace = true
