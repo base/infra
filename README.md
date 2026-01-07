@@ -2,6 +2,10 @@
 
 An extensible and modular RPC request router and proxy service built in Rust.
 
+[![CI](https://github.com/refcell/roxy/actions/workflows/ci.yml/badge.svg)](https://github.com/refcell/roxy/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/roxy-proxy.svg)](https://crates.io/crates/roxy-proxy)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Demo
 
 <https://github.com/user-attachments/assets/3c3fa289-5a12-41ff-b556-e52e4cd1f04d>
@@ -76,4 +80,4 @@ Roxy's design draws inspiration from the [commonwarexyz/monorepo](https://github
 
 ## License
 
-MIT
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
