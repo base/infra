@@ -23,8 +23,7 @@ use roxy_rpc::{
 use roxy_traits::{Cache, RateLimitResult, RateLimiter};
 use serde_json::value::RawValue;
 
-use crate::Span;
-use crate::error::ServerError;
+use crate::{Span, error::ServerError};
 
 /// Default header for client identification in rate limiting.
 const CLIENT_ID_HEADER: &str = "X-Forwarded-For";

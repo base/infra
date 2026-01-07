@@ -140,8 +140,7 @@ pub fn create_groups(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::backends::create_backends;
-    use crate::testutils::minimal_config;
+    use crate::{backends::create_backends, testutils::minimal_config};
 
     #[test]
     fn test_create_groups() {

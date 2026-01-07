@@ -12,10 +12,12 @@ use roxy_rpc::RpcCodec;
 use roxy_server::{ServerBuilder, create_router};
 use roxy_traits::DefaultCodecConfig;
 
-use crate::backends::BackendFactory;
-use crate::groups::GroupFactory;
-use crate::routing::RouterFactory;
-use crate::validators::{RateLimiterFactory, ValidatorFactory};
+use crate::{
+    backends::BackendFactory,
+    groups::GroupFactory,
+    routing::RouterFactory,
+    validators::{RateLimiterFactory, ValidatorFactory},
+};
 
 /// Builder for constructing the Roxy application.
 ///

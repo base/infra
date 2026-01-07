@@ -34,13 +34,12 @@ mod server;
 pub use server::run_server;
 
 mod validators;
-pub use validators::{
-    RateLimiterFactory, ValidatorFactory, create_rate_limiter, create_validators,
-};
-
 // Re-export for convenience
 pub use clap;
 pub use eyre;
+pub use validators::{
+    RateLimiterFactory, ValidatorFactory, create_rate_limiter, create_validators,
+};
 
 /// Test utilities for creating test configurations.
 #[cfg(test)]
