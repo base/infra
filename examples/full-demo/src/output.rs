@@ -91,6 +91,52 @@ pub(crate) fn print_failover_action(action: &str) {
     println!("  {YELLOW}[ACTION]{RESET} {action}");
 }
 
+/// Print rate limit result.
+pub(crate) fn print_rate_limit_result(request_num: usize, success: bool, duration: Duration) {
+    let ms = duration.as_millis();
+    if success {
+        println!("  Request {request_num}: {GREEN}[ALLOWED]{RESET} ({ms}ms)");
+    } else {
+        println!("  Request {request_num}: {RED}[RATE LIMITED]{RESET} ({ms}ms)");
+    }
+}
+
+/// Print method routing result.
+pub(crate) fn print_routing_result(method: &str, target_group: &str, served_by: &str) {
+    let color = get_node_color(served_by);
+    println!(
+        "  {DIM}[{method}]{RESET} -> group '{BLUE}{target_group}{RESET}' -> {color}{served_by}{RESET}"
+    );
+}
+
+/// Print method blocked result.
+pub(crate) fn print_blocked_method(method: &str, error_code: i64, error_msg: &str) {
+    println!("  {DIM}[{method}]{RESET} -> {RED}BLOCKED{RESET}");
+    println!("    Error: {DIM}{error_code}: {error_msg}{RESET}");
+}
+
+/// Print allowed method result (for contrast in blocking demo).
+pub(crate) fn print_allowed_method(method: &str, result: &str) {
+    println!("  {DIM}[{method}]{RESET} -> {GREEN}{result}{RESET} [ALLOWED]");
+}
+
+/// Print a delay message.
+pub(crate) fn print_delay(seconds: f64) {
+    println!();
+    println!("  {DIM}(pausing {seconds:.1}s before next demo...){RESET}");
+}
+
+/// Print subsection header.
+pub(crate) fn print_subsection(title: &str) {
+    println!();
+    println!("  {CYAN}--- {title} ---{RESET}");
+}
+
+/// Print EMA explanation line.
+pub(crate) fn print_ema_explanation(text: &str) {
+    println!("  {DIM}{text}{RESET}");
+}
+
 /// Print the distribution of requests across nodes.
 pub(crate) fn print_distribution(counts: &HashMap<String, u64>) {
     println!();

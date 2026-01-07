@@ -59,7 +59,12 @@ impl LoadBalancer for RoundRobinBalancer {
 
     fn select_ordered(&self, backends: &[Arc<dyn Backend>]) -> Vec<Arc<dyn Backend>> {
         let healthy: Vec<_> = backends.iter().filter(|b| b.is_healthy()).cloned().collect();
-        let idx = self.index.load(Ordering::Relaxed);
+        if healthy.is_empty() {
+            return Vec::new();
+        }
+
+        // Increment the index for next call to ensure rotation
+        let idx = self.index.fetch_add(1, Ordering::Relaxed);
 
         let mut result = Vec::with_capacity(healthy.len());
         for i in 0..healthy.len() {

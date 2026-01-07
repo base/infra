@@ -48,6 +48,16 @@ pub(crate) struct TimedResult {
     pub duration: Duration,
 }
 
+/// Result of a raw request that may contain an error.
+pub(crate) struct RawResult {
+    /// The full JSON response.
+    pub response: Value,
+    /// Whether the request succeeded (no error in response).
+    pub success: bool,
+    /// Time taken for the request.
+    pub duration: Duration,
+}
+
 impl DemoClient {
     /// Create a new demo client.
     pub(crate) fn new(roxy_port: u16) -> Self {
@@ -96,6 +106,36 @@ impl DemoClient {
         let value = self.request(method, params).await?;
         let duration = start.elapsed();
         Ok(TimedResult { value, duration })
+    }
+
+    /// Send a request and return raw result (including errors).
+    ///
+    /// This is useful for demonstrating rate limiting and method blocking
+    /// where we want to see the error responses.
+    pub(crate) async fn request_raw(&self, method: &str, params: Value) -> Result<RawResult> {
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0",
+            method: method.to_string(),
+            params,
+            id: self.next_id(),
+        };
+
+        let start = Instant::now();
+        let response = self
+            .client
+            .post(&self.roxy_url)
+            .json(&request)
+            .send()
+            .await
+            .wrap_err("failed to send request")?;
+
+        let duration = start.elapsed();
+
+        let json: Value = response.json().await.wrap_err("failed to parse response")?;
+
+        let success = json.get("error").is_none();
+
+        Ok(RawResult { response: json, success, duration })
     }
 
     /// Send a batch of JSON-RPC requests.
