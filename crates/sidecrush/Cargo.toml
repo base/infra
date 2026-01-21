@@ -17,6 +17,10 @@ async-trait = "0.1"
 anyhow = "1.0"
 clap = { workspace = true }
 
+# HTTP server
+axum = { workspace = true }
+tower-http = { workspace = true }
+
 # Ethereum client deps (will be used for header fetching)
 alloy-provider = { workspace = true }
 alloy-transport-http = { workspace = true }
@@ -26,4 +30,5 @@ alloy-primitives = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+tower = { version = "0.5", features = ["util"] }
 tracing = { workspace = true }
