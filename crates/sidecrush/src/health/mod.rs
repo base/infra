@@ -3,6 +3,12 @@
 //! This module provides the core `HealthCheck` trait that all health checks implement,
 //! along with the shared `HealthStatus` enum used across the daemon.
 
+pub mod block_age;
+pub mod wrappers;
+
+pub use block_age::{BlockAgeCheck, BlockAgeConfig};
+pub use wrappers::{OnceHealthyAlwaysHealthy, SharedHealthCheck};
+
 use async_trait::async_trait;
 
 /// Health status codes matching the existing blockbuilding healthcheck values.
