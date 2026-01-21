@@ -109,7 +109,7 @@ async fn main() {
         args.unhealthy_node_threshold_ms,
     );
 
-    let mut checker: BlockProductionHealthChecker<_> =
+    let checker: BlockProductionHealthChecker<_> =
         BlockProductionHealthChecker::new(node, client, config, metrics);
 
     // Spawn decoupled status emitter at 2s cadence

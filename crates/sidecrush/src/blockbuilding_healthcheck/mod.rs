@@ -1,33 +1,15 @@
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use async_trait::async_trait;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 use tokio::time::{interval, timeout};
 use tracing::{debug, error, info};
 
+use crate::health::{HealthCheck, HealthStatus};
 use crate::metrics::HealthcheckMetrics;
 
 pub mod alloy_client;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum HealthState {
-    Healthy,
-    Delayed,
-    Unhealthy,
-    Error,
-}
-
-impl HealthState {
-    fn code(&self) -> u8 {
-        match self {
-            HealthState::Healthy => 0,
-            HealthState::Delayed => 1,
-            HealthState::Unhealthy => 2,
-            HealthState::Error => 3,
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct HealthcheckConfig {
@@ -50,18 +32,31 @@ impl HealthcheckConfig {
     }
 }
 
-#[derive(Debug, Clone)]
+/// Represents a node being health-checked.
+#[derive(Debug)]
 pub struct Node {
     pub url: String,
-    pub is_new_instance: bool,
+    /// Tracks whether this is a new instance that hasn't been healthy yet.
+    /// Uses AtomicBool for interior mutability.
+    is_new_instance: AtomicBool,
 }
 
 impl Node {
     pub fn new(url: impl Into<String>, is_new_instance: bool) -> Self {
         Self {
             url: url.into(),
-            is_new_instance,
+            is_new_instance: AtomicBool::new(is_new_instance),
         }
+    }
+
+    /// Check if this node is still considered a new instance
+    pub fn is_new_instance(&self) -> bool {
+        self.is_new_instance.load(Ordering::Relaxed)
+    }
+
+    /// Mark this node as no longer a new instance (it has become healthy)
+    pub fn mark_healthy(&self) {
+        self.is_new_instance.store(false, Ordering::Relaxed);
     }
 }
 
@@ -79,6 +74,13 @@ pub trait EthClient: Send + Sync {
     ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>>;
 }
 
+/// Health checker for block production on a sequencer node.
+/// 
+/// Monitors block age and classifies health as:
+/// - Healthy: Block age within grace period
+/// - Delayed: Block age above grace period but below unhealthy threshold
+/// - Unhealthy: Block age above unhealthy threshold
+/// - Error: Failed to fetch block header
 #[derive(Debug)]
 pub struct BlockProductionHealthChecker<C: EthClient> {
     pub node: Node,
@@ -96,7 +98,7 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
         metrics: HealthcheckMetrics,
     ) -> Self {
         // default to healthy until first classification
-        let initial_status: u8 = HealthState::Healthy.code();
+        let initial_status: u8 = HealthStatus::Healthy.code();
         Self {
             node,
             client,
@@ -104,6 +106,11 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
             status_code: Arc::new(AtomicU8::new(initial_status)),
             metrics,
         }
+    }
+
+    /// Returns a clone of the status code Arc for sharing with other components
+    pub fn status_handle(&self) -> Arc<AtomicU8> {
+        self.status_code.clone()
     }
 
     pub fn spawn_status_emitter(&self, period_ms: u64) -> tokio::task::JoinHandle<()> {
@@ -124,8 +131,10 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
         })
     }
 
-    pub async fn run_health_check(&mut self) {
+    /// Run a single health check iteration.
+    pub async fn run_health_check(&self) {
         let url = &self.node.url;
+        let is_new = self.node.is_new_instance();
 
         debug!(sequencer = %url, "checking block production health");
 
@@ -135,27 +144,23 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
         let latest = match header_result {
             Ok(Ok(h)) => h,
             Ok(Err(e)) => {
-                if self.node.is_new_instance {
+                if is_new {
                     debug!(sequencer = %url, error = %e, "waiting for node to become healthy");
-                    self.status_code
-                        .store(HealthState::Error.code(), Ordering::Relaxed);
                 } else {
                     error!(sequencer = %url, error = %e, "failed to fetch block");
-                    self.status_code
-                        .store(HealthState::Error.code(), Ordering::Relaxed);
                 }
+                self.status_code
+                    .store(HealthStatus::Error.code(), Ordering::Relaxed);
                 return;
             }
             Err(_elapsed) => {
-                if self.node.is_new_instance {
+                if is_new {
                     debug!(sequencer = %url, "waiting for node to become healthy (timeout)");
-                    self.status_code
-                        .store(HealthState::Error.code(), Ordering::Relaxed);
                 } else {
                     error!(sequencer = %url, "failed to fetch block (timeout)");
-                    self.status_code
-                        .store(HealthState::Error.code(), Ordering::Relaxed);
                 }
+                self.status_code
+                    .store(HealthStatus::Error.code(), Ordering::Relaxed);
                 return;
             }
         };
@@ -170,19 +175,19 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
         let unhealthy_ms = self.config.unhealthy_node_threshold_ms;
         let grace_ms = self.config.grace_period_ms;
 
-        let state = if self.node.is_new_instance {
-            HealthState::Healthy
+        let state = if is_new {
+            HealthStatus::Healthy
         } else if block_age_ms >= unhealthy_ms {
-            HealthState::Unhealthy
+            HealthStatus::Unhealthy
         } else if block_age_ms > grace_ms {
-            HealthState::Delayed
+            HealthStatus::Delayed
         } else {
-            HealthState::Healthy
+            HealthStatus::Healthy
         };
         self.status_code.store(state.code(), Ordering::Relaxed);
 
         if block_age_ms > grace_ms {
-            if self.node.is_new_instance {
+            if is_new {
                 // Suppress delayed/unhealthy while new instance catches up
             } else if block_age_ms >= unhealthy_ms {
                 error!(
@@ -200,8 +205,8 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
                 );
             }
         } else {
-            if self.node.is_new_instance {
-                self.node.is_new_instance = false;
+            if is_new {
+                self.node.mark_healthy();
                 info!(
                     blockNumber = latest.number,
                     sequencer = %url,
@@ -216,12 +221,28 @@ impl<C: EthClient> BlockProductionHealthChecker<C> {
         }
     }
 
-    pub async fn poll_for_health_checks(&mut self) {
+    pub async fn poll_for_health_checks(&self) {
         let mut ticker = interval(Duration::from_millis(self.config.poll_interval_ms));
         loop {
             ticker.tick().await;
             self.run_health_check().await;
         }
+    }
+}
+
+// Implement the HealthCheck trait for BlockProductionHealthChecker
+#[async_trait]
+impl<C: EthClient + 'static> HealthCheck for BlockProductionHealthChecker<C> {
+    async fn check(&self) {
+        self.run_health_check().await;
+    }
+
+    fn current_status(&self) -> HealthStatus {
+        HealthStatus::from_code(self.status_code.load(Ordering::Relaxed))
+    }
+
+    fn name(&self) -> &'static str {
+        "block_production"
     }
 }
 
@@ -276,12 +297,12 @@ mod tests {
         };
         let node = Node::new("http://localhost:8545", false);
         let metrics = mock_metrics();
-        let mut checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
+        let checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
 
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Healthy.code()
+            checker.current_status(),
+            HealthStatus::Healthy
         );
     }
 
@@ -300,13 +321,13 @@ mod tests {
         };
         let node = Node::new("http://localhost:8545", false);
         let metrics = mock_metrics();
-        let mut checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
+        let checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
 
         // First healthy block
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Healthy.code()
+            checker.current_status(),
+            HealthStatus::Healthy
         );
 
         // Next block arrives but is delayed beyond grace
@@ -318,8 +339,8 @@ mod tests {
         };
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Delayed.code()
+            checker.current_status(),
+            HealthStatus::Delayed
         );
     }
 
@@ -338,13 +359,13 @@ mod tests {
         };
         let node = Node::new("http://localhost:8545", false);
         let metrics = mock_metrics();
-        let mut checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
+        let checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
 
         // First observation (healthy)
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Healthy.code()
+            checker.current_status(),
+            HealthStatus::Healthy
         );
 
         // Same head, but now sufficiently old to be unhealthy -> emits stall once
@@ -356,15 +377,70 @@ mod tests {
         };
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Unhealthy.code()
+            checker.current_status(),
+            HealthStatus::Unhealthy
         );
 
         // Re-run again with same head: should not re-emit; flag remains set
         checker.run_health_check().await;
         assert_eq!(
-            checker.status_code.load(Ordering::Relaxed),
-            HealthState::Unhealthy.code()
+            checker.current_status(),
+            HealthStatus::Unhealthy
         );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn health_check_trait_implementation() {
+        // Test that the HealthCheck trait is properly implemented
+        let cfg = HealthcheckConfig::new(1_000, 5_000, 15_000);
+        let start = now_secs();
+        let shared_header = Arc::new(Mutex::new(HeaderSummary {
+            number: 1,
+            timestamp_unix_seconds: start,
+            transaction_count: 5,
+        }));
+        let client = MockClient {
+            header: shared_header.clone(),
+        };
+        let node = Node::new("http://localhost:8545", false);
+        let metrics = mock_metrics();
+        let checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
+
+        // Use trait methods
+        assert_eq!(checker.name(), "block_production");
+        
+        // Initial status should be Healthy
+        assert_eq!(checker.current_status(), HealthStatus::Healthy);
+
+        // Run check via trait method
+        checker.check().await;
+        assert_eq!(checker.current_status(), HealthStatus::Healthy);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn new_instance_becomes_healthy() {
+        let cfg = HealthcheckConfig::new(1_000, 5_000, 15_000);
+        let start = now_secs();
+        let shared_header = Arc::new(Mutex::new(HeaderSummary {
+            number: 1,
+            timestamp_unix_seconds: start,
+            transaction_count: 5,
+        }));
+        let client = MockClient {
+            header: shared_header.clone(),
+        };
+        // Start as new instance
+        let node = Node::new("http://localhost:8545", true);
+        let metrics = mock_metrics();
+        let checker = BlockProductionHealthChecker::new(node, client, cfg, metrics);
+
+        // New instance should be marked healthy even if block is old
+        assert!(checker.node.is_new_instance());
+        
+        checker.check().await;
+        assert_eq!(checker.current_status(), HealthStatus::Healthy);
+        
+        // After first healthy check, should no longer be new instance
+        assert!(!checker.node.is_new_instance());
     }
 }
