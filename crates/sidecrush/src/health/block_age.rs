@@ -191,6 +191,13 @@ mod tests {
         ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>> {
             Ok(self.header.lock().unwrap().clone())
         }
+
+        async fn header_by_number(
+            &self,
+            _number: u64,
+        ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(self.header.lock().unwrap().clone())
+        }
     }
 
     fn now_secs() -> u64 {
@@ -206,6 +213,7 @@ mod tests {
             number: 100,
             timestamp_unix_seconds: now_secs(),
             transaction_count: 0,
+            hash: None,
         }));
         let client = MockClient { header };
         let config = BlockAgeConfig::new(Duration::from_secs(30));
@@ -221,6 +229,7 @@ mod tests {
             number: 100,
             timestamp_unix_seconds: now_secs() - 60, // 60 seconds old
             transaction_count: 0,
+            hash: None,
         }));
         let client = MockClient { header };
         let config = BlockAgeConfig::new(Duration::from_secs(30)); // 30 second threshold
@@ -236,6 +245,7 @@ mod tests {
             number: 100,
             timestamp_unix_seconds: now_secs() - 120, // 2 minutes old
             transaction_count: 0,
+            hash: None,
         }));
         let client = MockClient { header };
         let config = BlockAgeConfig::new(Duration::from_secs(30))
@@ -254,6 +264,7 @@ mod tests {
             number: 100,
             timestamp_unix_seconds: now_secs(),
             transaction_count: 0,
+            hash: None,
         }));
         let client = MockClient {
             header: header.clone(),

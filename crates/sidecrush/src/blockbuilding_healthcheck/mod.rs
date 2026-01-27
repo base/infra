@@ -65,12 +65,21 @@ pub struct HeaderSummary {
     pub number: u64,
     pub timestamp_unix_seconds: u64,
     pub transaction_count: usize,
+    /// Block hash for fork detection
+    pub hash: Option<[u8; 32]>,
 }
 
 #[async_trait]
 pub trait EthClient: Send + Sync {
+    /// Get the latest block header
     async fn latest_header(
         &self,
+    ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>>;
+
+    /// Get a block header by number (for fork detection)
+    async fn header_by_number(
+        &self,
+        number: u64,
     ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>>;
 }
 
@@ -264,6 +273,13 @@ mod tests {
         ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>> {
             Ok(self.header.lock().unwrap().clone())
         }
+
+        async fn header_by_number(
+            &self,
+            _number: u64,
+        ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(self.header.lock().unwrap().clone())
+        }
     }
 
     fn now_secs() -> u64 {
@@ -291,6 +307,7 @@ mod tests {
             number: 1,
             timestamp_unix_seconds: start,
             transaction_count: 5,
+            hash: None,
         }));
         let client = MockClient {
             header: shared_header.clone(),
@@ -315,6 +332,7 @@ mod tests {
             number: 1,
             timestamp_unix_seconds: start,
             transaction_count: 5,
+            hash: None,
         }));
         let client = MockClient {
             header: shared_header.clone(),
@@ -336,6 +354,7 @@ mod tests {
             number: 2,
             timestamp_unix_seconds: delayed_ts,
             transaction_count: 5,
+            hash: None,
         };
         checker.run_health_check().await;
         assert_eq!(
@@ -353,6 +372,7 @@ mod tests {
             number: 10,
             timestamp_unix_seconds: start,
             transaction_count: 5,
+            hash: None,
         }));
         let client = MockClient {
             header: shared_header.clone(),
@@ -374,6 +394,7 @@ mod tests {
             number: 10,
             timestamp_unix_seconds: unhealthy_ts,
             transaction_count: 5,
+            hash: None,
         };
         checker.run_health_check().await;
         assert_eq!(
@@ -398,6 +419,7 @@ mod tests {
             number: 1,
             timestamp_unix_seconds: start,
             transaction_count: 5,
+            hash: None,
         }));
         let client = MockClient {
             header: shared_header.clone(),
@@ -425,6 +447,7 @@ mod tests {
             number: 1,
             timestamp_unix_seconds: start,
             transaction_count: 5,
+            hash: None,
         }));
         let client = MockClient {
             header: shared_header.clone(),

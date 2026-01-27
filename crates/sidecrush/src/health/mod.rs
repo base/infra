@@ -4,9 +4,13 @@
 //! along with the shared `HealthStatus` enum used across the daemon.
 
 pub mod block_age;
+pub mod engine;
+pub mod fork;
 pub mod wrappers;
 
 pub use block_age::{BlockAgeCheck, BlockAgeConfig};
+pub use engine::{HealthEngine, Role};
+pub use fork::ForkCheck;
 pub use wrappers::{OnceHealthyAlwaysHealthy, SharedHealthCheck};
 
 use async_trait::async_trait;

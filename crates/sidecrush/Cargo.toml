@@ -31,6 +31,10 @@ alloy-rpc-types-eth = { workspace = true }
 alloy-consensus = { workspace = true }
 alloy-primitives = { workspace = true }
 
+# Platform-specific deps
+[target.'cfg(target_os = "linux")'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 tower = { version = "0.5", features = ["util"] }
