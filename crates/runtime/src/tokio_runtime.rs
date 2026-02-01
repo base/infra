@@ -22,6 +22,7 @@ pub struct TokioContext {
 
 impl TokioContext {
     /// Create a new Tokio context.
+    #[must_use]
     pub fn new() -> Self {
         let (stop_tx, stop_rx) = watch::channel(None);
         Self { label: String::new(), stop_tx: Arc::new(stop_tx), stop_rx }

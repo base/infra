@@ -44,6 +44,7 @@ pub struct DefaultCodecConfig {
 
 impl DefaultCodecConfig {
     /// Create a new default codec configuration.
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             max_size: 1024 * 1024, // 1 MB
@@ -54,24 +55,28 @@ impl DefaultCodecConfig {
     }
 
     /// Set the maximum size.
+    #[must_use]
     pub const fn with_max_size(mut self, size: usize) -> Self {
         self.max_size = size;
         self
     }
 
     /// Set the maximum depth.
+    #[must_use]
     pub const fn with_max_depth(mut self, depth: usize) -> Self {
         self.max_depth = depth;
         self
     }
 
     /// Set whether to allow batch requests.
+    #[must_use]
     pub const fn with_allow_batch(mut self, allow: bool) -> Self {
         self.allow_batch = allow;
         self
     }
 
     /// Set the maximum batch size.
+    #[must_use]
     pub const fn with_max_batch_size(mut self, size: usize) -> Self {
         self.max_batch_size = size;
         self

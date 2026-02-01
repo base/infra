@@ -71,6 +71,7 @@ pub struct DeterministicContext {
 
 impl DeterministicContext {
     /// Create a new deterministic context.
+    #[must_use]
     pub fn new() -> Self {
         let (stop_tx, stop_rx) = watch::channel(None);
         Self {

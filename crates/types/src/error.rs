@@ -53,6 +53,7 @@ pub enum RoxyError {
 
 impl RoxyError {
     /// Convert to an alloy ErrorPayload for JSON-RPC responses.
+    #[must_use]
     pub fn to_error_payload(&self) -> ErrorPayload {
         match self {
             Self::RateLimited { retry_after } => ErrorPayload {
@@ -75,6 +76,7 @@ impl RoxyError {
     }
 
     /// Whether this error should trigger failover to next backend.
+    #[must_use]
     pub const fn should_failover(&self) -> bool {
         matches!(self, Self::BackendOffline { .. } | Self::BackendTimeout { .. })
     }

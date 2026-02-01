@@ -74,16 +74,19 @@ impl RouteTarget {
     }
 
     /// Returns `true` if this target blocks the method.
+    #[must_use]
     pub const fn is_blocked(&self) -> bool {
         matches!(self, Self::Block)
     }
 
     /// Returns `true` if this target uses the default backend.
+    #[must_use]
     pub const fn is_default(&self) -> bool {
         matches!(self, Self::Default)
     }
 
     /// Returns the group name if this is a [`RouteTarget::Group`].
+    #[must_use]
     pub fn group_name(&self) -> Option<&str> {
         match self {
             Self::Group(name) => Some(name),
@@ -258,6 +261,7 @@ impl MethodRouter {
     /// // Default fallback
     /// assert_eq!(router.resolve("net_version").group_name(), Some("fallback"));
     /// ```
+    #[must_use]
     pub fn resolve(&self, method: &str) -> &RouteTarget {
         // Check exact routes first
         if let Some(target) = self.exact_routes.get(method) {
@@ -292,21 +296,25 @@ impl MethodRouter {
     /// assert!(router.is_blocked("debug_traceCall"));
     /// assert!(!router.is_blocked("eth_call"));
     /// ```
+    #[must_use]
     pub fn is_blocked(&self, method: &str) -> bool {
         self.resolve(method).is_blocked()
     }
 
     /// Returns the number of exact routes configured.
+    #[must_use]
     pub fn exact_route_count(&self) -> usize {
         self.exact_routes.len()
     }
 
     /// Returns the number of prefix routes configured.
+    #[must_use]
     pub const fn prefix_route_count(&self) -> usize {
         self.prefix_routes.len()
     }
 
     /// Returns a reference to the default target.
+    #[must_use]
     pub const fn default_target(&self) -> &RouteTarget {
         &self.default_target
     }

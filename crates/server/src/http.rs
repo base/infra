@@ -319,8 +319,11 @@ fn create_request_packet(request: &ParsedRequest) -> Result<RequestPacket, serde
     };
 
     // Get params as a boxed RawValue
-    let params =
-        request.params.clone().unwrap_or_else(|| RawValue::from_string("[]".to_string()).unwrap());
+    // SAFETY: "[]" is always valid JSON, so this will never fail
+    let params = request
+        .params
+        .clone()
+        .unwrap_or_else(|| RawValue::from_string("[]".to_string()).expect("empty array is valid JSON"));
 
     // Create the request
     let req = Request::new(request.method.clone(), id, params);
