@@ -26,11 +26,13 @@ pub struct ParsedRequest {
 }
 
 impl ParsedRequest {
+    #[must_use]
     /// Get the method name.
     pub fn method(&self) -> &str {
         &self.method
     }
 
+    #[must_use]
     /// Check if this is a notification (no id or null id).
     pub const fn is_notification(&self) -> bool {
         self.id.is_none() || matches!(&self.id, Some(serde_json::Value::Null))
@@ -47,6 +49,7 @@ pub enum ParsedRequestPacket {
 }
 
 impl ParsedRequestPacket {
+    #[must_use]
     /// Get the number of requests in this packet.
     pub const fn len(&self) -> usize {
         match self {
@@ -55,6 +58,7 @@ impl ParsedRequestPacket {
         }
     }
 
+    #[must_use]
     /// Check if this packet is empty (only possible for malformed batches).
     pub const fn is_empty(&self) -> bool {
         match self {
@@ -63,11 +67,13 @@ impl ParsedRequestPacket {
         }
     }
 
+    #[must_use]
     /// Check if this is a batch request.
     pub const fn is_batch(&self) -> bool {
         matches!(self, Self::Batch(_))
     }
 
+    #[must_use]
     /// Get an iterator over the methods in this packet.
     pub fn methods(&self) -> Box<dyn Iterator<Item = &str> + '_> {
         match self {
@@ -76,6 +82,7 @@ impl ParsedRequestPacket {
         }
     }
 
+    #[must_use]
     /// Get an iterator over the requests in this packet.
     pub fn requests(&self) -> Box<dyn Iterator<Item = &ParsedRequest> + '_> {
         match self {
@@ -101,16 +108,19 @@ pub struct ParsedResponse {
 }
 
 impl ParsedResponse {
+    #[must_use]
     /// Create a successful response.
     pub fn success(id: serde_json::Value, result: Box<RawValue>) -> Self {
         Self { jsonrpc: "2.0".to_string(), result: Some(result), error: None, id }
     }
 
+    #[must_use]
     /// Create an error response.
     pub fn error(id: serde_json::Value, error: JsonRpcError) -> Self {
         Self { jsonrpc: "2.0".to_string(), result: None, error: Some(error), id }
     }
 
+    #[must_use]
     /// Check if this response is an error.
     pub const fn is_error(&self) -> bool {
         self.error.is_some()
@@ -130,36 +140,43 @@ pub struct JsonRpcError {
 }
 
 impl JsonRpcError {
+    #[must_use]
     /// Create a new error.
     pub fn new(code: i64, message: impl Into<String>) -> Self {
         Self { code, message: message.into(), data: None }
     }
 
+    #[must_use]
     /// Create a new error with data.
     pub fn with_data(code: i64, message: impl Into<String>, data: Box<RawValue>) -> Self {
         Self { code, message: message.into(), data: Some(data) }
     }
 
+    #[must_use]
     /// Parse error (-32700).
     pub fn parse_error() -> Self {
         Self::new(-32700, "Parse error")
     }
 
+    #[must_use]
     /// Invalid request (-32600).
     pub fn invalid_request() -> Self {
         Self::new(-32600, "Invalid Request")
     }
 
+    #[must_use]
     /// Method not found (-32601).
     pub fn method_not_found() -> Self {
         Self::new(-32601, "Method not found")
     }
 
+    #[must_use]
     /// Invalid params (-32602).
     pub fn invalid_params() -> Self {
         Self::new(-32602, "Invalid params")
     }
 
+    #[must_use]
     /// Internal error (-32603).
     pub fn internal_error() -> Self {
         Self::new(-32603, "Internal error")
@@ -198,11 +215,13 @@ pub struct RpcCodec<C: CodecConfig = DefaultCodecConfig> {
 }
 
 impl<C: CodecConfig> RpcCodec<C> {
+    #[must_use]
     /// Create a new RPC codec with the given configuration.
     pub const fn new(config: C) -> Self {
         Self { config }
     }
 
+    #[must_use]
     /// Get a reference to the codec configuration.
     pub const fn config(&self) -> &C {
         &self.config

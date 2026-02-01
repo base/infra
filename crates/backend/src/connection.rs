@@ -29,11 +29,13 @@ pub enum ConnectionState {
 }
 
 impl ConnectionState {
+    #[must_use]
     /// Check if the backend should accept requests.
     pub const fn is_available(&self) -> bool {
         matches!(self, Self::Connected)
     }
 
+    #[must_use]
     /// Check if the backend should attempt reconnection.
     pub fn should_reconnect(&self) -> bool {
         match self {
@@ -76,16 +78,19 @@ pub struct ConnectionStateMachine {
 }
 
 impl ConnectionStateMachine {
+    #[must_use]
     /// Create a new connection state machine.
     pub const fn new(config: ConnectionConfig) -> Self {
         Self { state: ConnectionState::Connecting { attempts: 0 }, config }
     }
 
+    #[must_use]
     /// Get the current state.
     pub const fn state(&self) -> ConnectionState {
         self.state
     }
 
+    #[must_use]
     /// Check if the backend is available for requests.
     pub const fn is_available(&self) -> bool {
         self.state.is_available()
@@ -134,6 +139,7 @@ impl ConnectionStateMachine {
         };
     }
 
+    #[must_use]
     /// Get the backoff duration before next retry.
     pub fn backoff_duration(&self) -> Duration {
         match self.state {
@@ -149,6 +155,7 @@ impl ConnectionStateMachine {
         }
     }
 
+    #[must_use]
     /// Attempt to transition from banned/disconnected to connecting.
     pub fn try_reconnect(&mut self) -> bool {
         if self.state.should_reconnect() {

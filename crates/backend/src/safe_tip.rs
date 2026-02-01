@@ -21,6 +21,7 @@ impl SafeTip {
     /// # Arguments
     ///
     /// * `f` - Maximum number of Byzantine faulty backends.
+    #[must_use]
     pub fn new(f: usize) -> Self {
         Self { tips: HashMap::new(), hi: BTreeMap::new(), lo: BTreeMap::new(), f }
     }
@@ -40,11 +41,13 @@ impl SafeTip {
         self.rebalance();
     }
 
+    #[must_use]
     /// Get Byzantine-safe tip (f+1 honest backends agree).
     pub fn get(&self) -> BlockNumber {
         self.lo.keys().max().copied().unwrap_or_default()
     }
 
+    #[must_use]
     /// Get latest reported tip (any backend).
     pub fn latest(&self) -> BlockNumber {
         self.hi.keys().max().or_else(|| self.lo.keys().max()).copied().unwrap_or_default()
