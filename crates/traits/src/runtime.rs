@@ -22,6 +22,10 @@ impl<T> Handle<T> {
     }
 
     /// Wait for the task to complete.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`JoinError`] if the task was cancelled or panicked.
     pub async fn join(self) -> Result<T, JoinError> {
         self.inner.await.map_err(JoinError)
     }

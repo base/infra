@@ -110,9 +110,19 @@ impl CodecConfig for DefaultCodecConfig {
 /// Trait for decoding bytes into a type with configuration.
 pub trait Decode: Sized {
     /// Decode from bytes using the given configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CodecError`] if decoding fails due to invalid data,
+    /// size limits exceeded, or other configuration violations.
     fn decode<C: CodecConfig>(bytes: &[u8], config: &C) -> Result<Self, CodecError>;
 
     /// Decode from Bytes using the given configuration.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CodecError`] if decoding fails due to invalid data,
+    /// size limits exceeded, or other configuration violations.
     fn decode_bytes<C: CodecConfig>(bytes: &Bytes, config: &C) -> Result<Self, CodecError> {
         Self::decode(bytes.as_ref(), config)
     }
@@ -121,9 +131,17 @@ pub trait Decode: Sized {
 /// Trait for encoding a type into bytes.
 pub trait Encode {
     /// Encode into bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CodecError`] if encoding fails.
     fn encode(&self) -> Result<Bytes, CodecError>;
 
     /// Encode into a `Vec<u8>`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CodecError`] if encoding fails.
     fn encode_vec(&self) -> Result<Vec<u8>, CodecError> {
         self.encode().map(|b| b.to_vec())
     }
