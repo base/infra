@@ -42,6 +42,7 @@ pub enum ServerError {
 
 impl ServerError {
     /// Convert the error to a JSON-RPC error.
+    #[must_use]
     pub fn to_json_rpc_error(&self) -> JsonRpcError {
         match self {
             Self::RateLimited { retry_after } => {

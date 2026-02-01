@@ -37,6 +37,7 @@ pub struct EmaHealthTracker {
 
 impl EmaHealthTracker {
     /// Create a new EMA health tracker.
+    #[must_use]
     pub const fn new(config: HealthConfig) -> Self {
         Self {
             latency_ema: Duration::ZERO,

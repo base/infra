@@ -115,6 +115,7 @@ impl RateLimiterFactory {
 /// # Returns
 ///
 /// A configured ValidatorChain.
+#[must_use]
 pub fn create_validators(config: &RoxyConfig) -> ValidatorChain {
     ValidatorFactory::new().create(config)
 }
@@ -131,6 +132,7 @@ pub fn create_validators(config: &RoxyConfig) -> ValidatorChain {
 /// # Returns
 ///
 /// An optional SlidingWindowRateLimiter.
+#[must_use]
 pub fn create_rate_limiter(config: &RoxyConfig) -> Option<SlidingWindowRateLimiter> {
     RateLimiterFactory::new().create(config)
 }

@@ -34,6 +34,7 @@ pub struct Logger;
 
 impl Logger {
     /// Create a new Logger instance.
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }

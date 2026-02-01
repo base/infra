@@ -83,6 +83,7 @@ pub struct WsResponse {
 
 impl WsResponse {
     /// Create a successful response.
+    #[must_use]
     pub fn success(id: serde_json::Value, result: serde_json::Value) -> Self {
         Self { jsonrpc: "2.0".to_string(), id, result: Some(result), error: None }
     }
@@ -123,6 +124,7 @@ pub struct WsNotification {
 
 impl WsNotification {
     /// Create a new subscription notification.
+    #[must_use]
     pub fn new(subscription_id: String, result: serde_json::Value) -> Self {
         Self {
             jsonrpc: "2.0".to_string(),
@@ -159,6 +161,7 @@ pub struct ConnectionTracker {
 
 impl ConnectionTracker {
     /// Create a new connection tracker with the given maximum.
+    #[must_use]
     pub const fn new(max: usize) -> Self {
         Self { current: AtomicUsize::new(0), max }
     }
@@ -256,6 +259,7 @@ pub struct SubscriptionManager {
 
 impl SubscriptionManager {
     /// Create a new subscription manager.
+    #[must_use]
     pub fn new(sender: mpsc::Sender<String>, max_subscriptions: usize) -> Self {
         Self { subscriptions: HashMap::new(), sender, max_subscriptions, next_id: 1 }
     }
@@ -370,11 +374,13 @@ impl SubscriptionManager {
     }
 
     /// Get the number of active subscriptions.
+    #[must_use]
     pub fn subscription_count(&self) -> usize {
         self.subscriptions.len()
     }
 
     /// Check if a subscription exists.
+    #[must_use]
     pub fn has_subscription(&self, id: &str) -> bool {
         self.subscriptions.contains_key(id)
     }

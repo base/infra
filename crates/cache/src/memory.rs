@@ -23,6 +23,7 @@ pub struct MemoryCache {
 
 impl MemoryCache {
     /// Create a new memory cache with the given capacity.
+    #[must_use]
     pub fn new(capacity: usize) -> Self {
         let cap = NonZeroUsize::new(capacity).unwrap_or(NonZeroUsize::new(1000).unwrap());
         Self { cache: Mutex::new(LruCache::new(cap)) }

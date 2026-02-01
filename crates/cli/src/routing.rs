@@ -82,6 +82,7 @@ impl RouterFactory {
 /// # Returns
 ///
 /// A configured MethodRouter.
+#[must_use]
 pub fn create_method_router(config: &RoxyConfig) -> MethodRouter {
     RouterFactory::new().create(config)
 }

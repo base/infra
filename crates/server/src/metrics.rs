@@ -63,6 +63,7 @@ impl RoxyMetrics {
     /// Get the Prometheus scrape output.
     ///
     /// Returns all collected metrics in Prometheus text exposition format.
+    #[must_use]
     pub fn render(&self) -> String {
         self.handle.render()
     }

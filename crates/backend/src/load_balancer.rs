@@ -35,6 +35,7 @@ pub struct RoundRobinBalancer {
 
 impl RoundRobinBalancer {
     /// Create a new round-robin balancer.
+    #[must_use]
     pub const fn new() -> Self {
         Self { index: AtomicUsize::new(0) }
     }
