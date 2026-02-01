@@ -10,6 +10,7 @@ use derive_more::{Debug, Display, Error, From};
 /// Handle to a spawned task.
 #[derive(Debug)]
 #[debug("Handle {{ .. }}")]
+#[must_use = "task handles should be awaited or stored"]
 pub struct Handle<T> {
     inner: tokio::task::JoinHandle<T>,
 }
