@@ -26,16 +26,19 @@ pub enum RateLimitResult {
 
 impl RateLimitResult {
     /// Returns true if the request is allowed.
+    #[must_use]
     pub const fn is_allowed(&self) -> bool {
         matches!(self, Self::Allowed)
     }
 
     /// Returns true if the request is rate limited.
+    #[must_use]
     pub const fn is_limited(&self) -> bool {
         matches!(self, Self::Limited { .. })
     }
 
     /// Returns the retry duration if rate limited.
+    #[must_use]
     pub const fn retry_after(&self) -> Option<Duration> {
         match self {
             Self::Allowed => None,

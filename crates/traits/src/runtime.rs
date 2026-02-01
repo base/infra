@@ -56,6 +56,8 @@ pub trait Spawner: Clone + Send + Sync + 'static {
         T: Send + 'static;
 
     /// Spawn with a label for metrics/tracing.
+    #[must_use]
+    #[must_use = "with_label returns a new labeled spawner, the original is unchanged"]
     fn with_label(&self, label: &str) -> Self;
 
     /// Signal shutdown with exit code.

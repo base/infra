@@ -64,6 +64,7 @@ impl ValidationResult {
     ///
     /// # Panics
     /// Panics if the result is `Invalid`.
+    #[must_use]
     pub fn unwrap(self) -> ParsedRequest {
         match self {
             Self::Valid(request) => request,
@@ -322,6 +323,7 @@ pub struct NoopValidator;
 
 impl NoopValidator {
     /// Create a new no-op validator.
+    #[must_use]
     pub const fn new() -> Self {
         Self
     }

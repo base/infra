@@ -20,6 +20,7 @@ pub struct RateLimiterConfig {
 
 impl RateLimiterConfig {
     /// Create a new rate limiter configuration.
+    #[must_use]
     pub const fn new(requests_per_window: u64, window_duration: Duration) -> Self {
         Self { requests_per_window, window_duration }
     }
@@ -87,11 +88,13 @@ pub struct SlidingWindowRateLimiter {
 
 impl SlidingWindowRateLimiter {
     /// Create a new sliding window rate limiter with the given configuration.
+    #[must_use]
     pub fn new(config: RateLimiterConfig) -> Self {
         Self { config, windows: Mutex::new(HashMap::new()) }
     }
 
     /// Get the configuration for this rate limiter.
+    #[must_use]
     pub const fn config(&self) -> &RateLimiterConfig {
         &self.config
     }
