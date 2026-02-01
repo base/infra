@@ -11,6 +11,8 @@ pub mod error_codes {
     pub const RATE_LIMITED: i64 = -32016;
     /// Backend offline error code.
     pub const BACKEND_OFFLINE: i64 = -32010;
+    /// Backend timeout error code.
+    pub const BACKEND_TIMEOUT: i64 = -32011;
 }
 
 /// Error type for the Roxy proxy.
@@ -58,17 +60,22 @@ impl RoxyError {
         match self {
             Self::RateLimited { retry_after } => ErrorPayload {
                 code: error_codes::RATE_LIMITED,
-                message: format!("rate limited, retry after {:?}", retry_after).into(),
+                message: format!("rate limited, retry after {retry_after:?}").into(),
                 data: None,
             },
             Self::BackendOffline { backend } => ErrorPayload {
                 code: error_codes::BACKEND_OFFLINE,
-                message: format!("backend {} is offline", backend).into(),
+                message: format!("backend {backend} is offline").into(),
                 data: None,
             },
             Self::NoHealthyBackends => ErrorPayload {
                 code: error_codes::BACKEND_OFFLINE,
                 message: "no healthy backends".into(),
+                data: None,
+            },
+            Self::BackendTimeout { backend } => ErrorPayload {
+                code: error_codes::BACKEND_TIMEOUT,
+                message: format!("backend {backend} timed out").into(),
                 data: None,
             },
             _ => ErrorPayload::internal_error(),
@@ -88,7 +95,6 @@ mod tests {
 
     use super::*;
 
-    /// Test that should_failover returns the expected value for each error type.
     #[rstest]
     #[case::rate_limited(RoxyError::RateLimited { retry_after: Duration::from_secs(5) }, false)]
     #[case::backend_offline(RoxyError::BackendOffline { backend: "primary".to_string() }, true)]
@@ -100,10 +106,10 @@ mod tests {
         assert_eq!(error.should_failover(), expected);
     }
 
-    /// Test that to_error_payload returns the expected error code for each error type.
     #[rstest]
     #[case::rate_limited(RoxyError::RateLimited { retry_after: Duration::from_secs(5) }, error_codes::RATE_LIMITED)]
     #[case::backend_offline(RoxyError::BackendOffline { backend: "primary".to_string() }, error_codes::BACKEND_OFFLINE)]
+    #[case::backend_timeout(RoxyError::BackendTimeout { backend: "slow".to_string() }, error_codes::BACKEND_TIMEOUT)]
     #[case::no_healthy_backends(RoxyError::NoHealthyBackends, error_codes::BACKEND_OFFLINE)]
     #[case::cache_error(RoxyError::CacheError("connection failed".to_string()), -32603)]
     #[case::internal_error(RoxyError::Internal("unexpected state".to_string()), -32603)]
@@ -112,7 +118,6 @@ mod tests {
         assert_eq!(payload.code, expected_code);
     }
 
-    /// Test that error Display messages contain expected substrings.
     #[rstest]
     #[case::rate_limited(RoxyError::RateLimited { retry_after: Duration::from_secs(5) }, "rate limited")]
     #[case::backend_offline(RoxyError::BackendOffline { backend: "primary".to_string() }, "primary")]
@@ -129,13 +134,27 @@ mod tests {
         );
     }
 
-    /// Test that backend offline error payload message contains the backend name.
     #[rstest]
     #[case::primary("primary")]
     #[case::secondary("secondary")]
     #[case::node_1("node-1")]
     fn test_backend_offline_payload_contains_name(#[case] backend_name: &str) {
         let err = RoxyError::BackendOffline { backend: backend_name.to_string() };
+        let payload = err.to_error_payload();
+        assert!(
+            payload.message.contains(backend_name),
+            "Expected payload message '{}' to contain '{}'",
+            payload.message,
+            backend_name
+        );
+    }
+
+    #[rstest]
+    #[case::primary("primary")]
+    #[case::secondary("secondary")]
+    #[case::node_1("node-1")]
+    fn test_backend_timeout_payload_contains_name(#[case] backend_name: &str) {
+        let err = RoxyError::BackendTimeout { backend: backend_name.to_string() };
         let payload = err.to_error_payload();
         assert!(
             payload.message.contains(backend_name),
