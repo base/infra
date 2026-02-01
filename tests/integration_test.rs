@@ -61,12 +61,9 @@ fn test_basic_request_flow() {
 
     // 4. Validate the request
     let validator_chain = ValidatorChain::new();
-    match packet {
-        ParsedRequestPacket::Single(req) => {
-            let result = validator_chain.validate(req);
-            assert!(result.is_valid());
-        }
-        _ => {}
+    if let ParsedRequestPacket::Single(req) = packet {
+        let result = validator_chain.validate(req);
+        assert!(result.is_valid());
     }
 }
 

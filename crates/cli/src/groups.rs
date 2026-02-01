@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn test_group_factory_default() {
-        let factory = GroupFactory::default();
+        let factory = GroupFactory;
         // Just ensure it can be created
         let _ = format!("{:?}", factory);
     }

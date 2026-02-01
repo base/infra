@@ -104,7 +104,7 @@ mod tests {
 
     #[test]
     fn test_router_factory_default() {
-        let factory = RouterFactory::default();
+        let factory = RouterFactory;
         let _ = format!("{:?}", factory);
     }
 }

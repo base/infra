@@ -175,13 +175,13 @@ mod tests {
 
     #[test]
     fn test_validator_factory_default() {
-        let factory = ValidatorFactory::default();
+        let factory = ValidatorFactory;
         let _ = format!("{:?}", factory);
     }
 
     #[test]
     fn test_rate_limiter_factory_default() {
-        let factory = RateLimiterFactory::default();
+        let factory = RateLimiterFactory;
         let _ = format!("{:?}", factory);
     }
 }

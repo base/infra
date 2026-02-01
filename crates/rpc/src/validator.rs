@@ -634,7 +634,7 @@ mod tests {
 
     #[test]
     fn test_noop_validator_default() {
-        let validator = NoopValidator::default();
+        let validator = NoopValidator;
         let request = make_request_no_params("eth_test");
         let result = validator.validate(request);
         assert!(result.is_valid());
