@@ -28,19 +28,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: test_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
@@ -51,8 +38,6 @@ jobs:
       - uses: dtolnay/rust-toolchain@4305c38b25d97ef35a8ad1f985ccf2d2242004f2 # stable
       - name: Run tests
         run: cargo test --workspace --all-features
-        env:
-          DATABASE_URL: postgresql://postgres:password@localhost:5432/test_db
 
   lint:
     name: Lint
@@ -75,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [mempool-rebroadcaster, flashblocks-archiver]
+        service: [mempool-rebroadcaster]
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
