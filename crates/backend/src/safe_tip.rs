@@ -93,7 +93,8 @@ impl SafeTip {
                     *self.hi.entry(height).or_insert(0) += count;
                 } else {
                     // Move only part of the count
-                    *self.lo.get_mut(&height).unwrap() -= excess;
+                    // height exists: obtained from iter().next_back() and only if-branch removes it
+                    *self.lo.get_mut(&height).expect("height exists in lo") -= excess;
                     *self.hi.entry(height).or_insert(0) += excess;
                 }
             } else {

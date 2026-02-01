@@ -114,7 +114,8 @@ impl Backend for HttpBackend {
             }
         }
 
-        Err(last_error.unwrap())
+        // SAFETY: Loop always sets last_error before exiting without return
+        Err(last_error.expect("loop guarantees error was set"))
     }
 
     fn health_status(&self) -> HealthStatus {
