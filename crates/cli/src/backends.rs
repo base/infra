@@ -63,7 +63,7 @@ impl BackendFactory {
                 backend_config.name.clone(),
                 backend_config.url.clone(),
                 http_config,
-            );
+            )?;
 
             backends.insert(backend_config.name.clone(), Arc::new(backend) as Arc<dyn Backend>);
             trace!(name = %backend_config.name, url = %backend_config.url, "Created backend");

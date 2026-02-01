@@ -42,19 +42,23 @@ pub struct HttpBackend {
 
 impl HttpBackend {
     /// Create a new HTTP backend.
-    pub fn new(name: String, rpc_url: String, config: BackendConfig) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HTTP client fails to build.
+    pub fn new(name: String, rpc_url: String, config: BackendConfig) -> Result<Self, RoxyError> {
         let client = reqwest::Client::builder()
             .timeout(config.timeout)
             .build()
-            .expect("failed to build HTTP client");
+            .map_err(|e| RoxyError::Internal(format!("failed to build HTTP client: {e}")))?;
 
-        Self {
+        Ok(Self {
             name,
             rpc_url,
             client,
             health: Arc::new(RwLock::new(EmaHealthTracker::new(Default::default()))),
             config,
-        }
+        })
     }
 
     async fn do_forward(&self, request: &RequestPacket) -> Result<ResponsePacket, RoxyError> {
