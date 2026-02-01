@@ -27,6 +27,7 @@ pub struct CompressedCache<C> {
 
 impl<C: Cache> CompressedCache<C> {
     /// Create a new compressed cache with default compression quality.
+    #[must_use]
     pub fn new(inner: C) -> Self {
         Self::with_quality(inner, DEFAULT_QUALITY)
     }
@@ -36,6 +37,7 @@ impl<C: Cache> CompressedCache<C> {
     /// # Arguments
     /// * `inner` - The inner cache to wrap
     /// * `quality` - Brotli compression quality (0-11, where 11 is best compression)
+    #[must_use]
     pub fn with_quality(inner: C, quality: u32) -> Self {
         Self { inner, quality: quality.min(11) }
     }
@@ -50,7 +52,7 @@ impl<C: Cache> CompressedCache<C> {
                 self.quality,
                 DEFAULT_LG_WINDOW_SIZE,
             );
-            writer.write_all(data).map_err(|e| CacheError(format!("compression failed: {}", e)))?;
+            writer.write_all(data).map_err(|e| CacheError(format!("compression failed: {e}")))?;
         }
         Ok(compressed)
     }
@@ -61,7 +63,7 @@ impl<C: Cache> CompressedCache<C> {
         let mut decompressor = brotli::Decompressor::new(data, 4096);
         decompressor
             .read_to_end(&mut decompressed)
-            .map_err(|e| CacheError(format!("decompression failed: {}", e)))?;
+            .map_err(|e| CacheError(format!("decompression failed: {e}")))?;
         Ok(decompressed)
     }
 }

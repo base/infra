@@ -26,7 +26,7 @@ impl RedisCache {
     /// Returns a `CacheError` if the URL is invalid or connection cannot be established.
     pub fn new(url: &str) -> Result<Self, CacheError> {
         let client =
-            Client::open(url).map_err(|e| CacheError(format!("failed to create client: {}", e)))?;
+            Client::open(url).map_err(|e| CacheError(format!("failed to create client: {e}")))?;
         Ok(Self { client })
     }
 
@@ -35,7 +35,7 @@ impl RedisCache {
         self.client
             .get_multiplexed_async_connection()
             .await
-            .map_err(|e| CacheError(format!("connection error: {}", e)))
+            .map_err(|e| CacheError(format!("connection error: {e}")))
     }
 }
 
@@ -44,7 +44,7 @@ impl Cache for RedisCache {
         let mut conn = self.get_connection().await?;
 
         let result: Option<Vec<u8>> =
-            conn.get(key).await.map_err(|e| CacheError(format!("get error: {}", e)))?;
+            conn.get(key).await.map_err(|e| CacheError(format!("get error: {e}")))?;
 
         Ok(result.map(Bytes::from))
     }
@@ -58,7 +58,7 @@ impl Cache for RedisCache {
         // Use SETEX for atomic set with expiration
         conn.set_ex::<_, _, ()>(key, value.as_ref(), ttl_secs)
             .await
-            .map_err(|e| CacheError(format!("put error: {}", e)))?;
+            .map_err(|e| CacheError(format!("put error: {e}")))?;
 
         Ok(())
     }
@@ -66,7 +66,7 @@ impl Cache for RedisCache {
     async fn delete(&self, key: &str) -> Result<(), CacheError> {
         let mut conn = self.get_connection().await?;
 
-        conn.del::<_, ()>(key).await.map_err(|e| CacheError(format!("delete error: {}", e)))?;
+        conn.del::<_, ()>(key).await.map_err(|e| CacheError(format!("delete error: {e}")))?;
 
         Ok(())
     }

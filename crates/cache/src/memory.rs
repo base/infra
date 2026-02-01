@@ -39,8 +39,7 @@ impl std::fmt::Debug for MemoryCache {
 
 impl Cache for MemoryCache {
     async fn get(&self, key: &str) -> Result<Option<Bytes>, CacheError> {
-        let mut cache =
-            self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {}", e)))?;
+        let mut cache = self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {e}")))?;
 
         if let Some(entry) = cache.get(key) {
             if entry.expires_at > Instant::now() {
@@ -53,8 +52,7 @@ impl Cache for MemoryCache {
     }
 
     async fn put(&self, key: &str, value: Bytes, ttl: Duration) -> Result<(), CacheError> {
-        let mut cache =
-            self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {}", e)))?;
+        let mut cache = self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {e}")))?;
 
         let entry = CacheEntry { value, expires_at: Instant::now() + ttl };
 
@@ -63,8 +61,7 @@ impl Cache for MemoryCache {
     }
 
     async fn delete(&self, key: &str) -> Result<(), CacheError> {
-        let mut cache =
-            self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {}", e)))?;
+        let mut cache = self.cache.lock().map_err(|e| CacheError(format!("lock poisoned: {e}")))?;
 
         cache.pop(key);
         Ok(())

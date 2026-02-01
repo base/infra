@@ -84,7 +84,7 @@ impl HttpBackend {
         response
             .json()
             .await
-            .map_err(|e| RoxyError::Internal(format!("failed to parse response: {}", e)))
+            .map_err(|e| RoxyError::Internal(format!("failed to parse response: {e}")))
     }
 }
 

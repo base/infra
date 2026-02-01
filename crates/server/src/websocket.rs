@@ -527,7 +527,7 @@ async fn handle_message(
         Ok(req) => req,
         Err(e) => {
             let response =
-                WsResponse::error(serde_json::Value::Null, -32700, format!("Parse error: {}", e));
+                WsResponse::error(serde_json::Value::Null, -32700, format!("Parse error: {e}"));
             return serde_json::to_string(&response).ok();
         }
     };
@@ -579,7 +579,7 @@ async fn handle_subscribe(
             return WsResponse::error(
                 request.id.clone(),
                 -32602,
-                format!("Unknown subscription type: {}", subscription_type),
+                format!("Unknown subscription type: {subscription_type}"),
             );
         }
     }

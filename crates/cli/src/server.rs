@@ -53,7 +53,7 @@ pub async fn run_server(app: roxy_server::Router, config: &RoxyConfig) -> Result
     let addr = format!("{}:{}", config.server.host, config.server.port);
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
-        .wrap_err_with(|| format!("failed to bind to {}", addr))?;
+        .wrap_err_with(|| format!("failed to bind to {addr}"))?;
 
     info!(address = %addr, "Roxy RPC proxy listening");
 
@@ -63,7 +63,7 @@ pub async fn run_server(app: roxy_server::Router, config: &RoxyConfig) -> Result
         let metrics_addr = format!("{}:{}", config.metrics.host, config.metrics.port);
         let metrics_listener = tokio::net::TcpListener::bind(&metrics_addr)
             .await
-            .wrap_err_with(|| format!("failed to bind metrics server to {}", metrics_addr))?;
+            .wrap_err_with(|| format!("failed to bind metrics server to {metrics_addr}"))?;
 
         info!(address = %metrics_addr, "Metrics server listening");
 

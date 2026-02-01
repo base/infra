@@ -54,7 +54,7 @@ pub enum RoxyError {
 }
 
 impl RoxyError {
-    /// Convert to an alloy ErrorPayload for JSON-RPC responses.
+    /// Convert to an alloy [`ErrorPayload`] for JSON-RPC responses.
     #[must_use]
     pub fn to_error_payload(&self) -> ErrorPayload {
         match self {

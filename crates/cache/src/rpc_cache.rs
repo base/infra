@@ -36,6 +36,7 @@ impl<C: Cache> RpcCache<C> {
     ///
     /// This initializes the cache with sensible default policies for common
     /// Ethereum JSON-RPC methods.
+    #[must_use]
     pub fn new(inner: C) -> Self {
         let mut policies = HashMap::new();
 
