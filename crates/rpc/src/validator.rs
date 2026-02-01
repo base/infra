@@ -27,6 +27,7 @@ impl ValidationError {
     }
 
     /// Create a method not allowed error.
+    #[must_use]
     pub fn method_not_allowed(method: &str) -> Self {
         Self::new(-32601, format!("method '{}' is not allowed", method))
     }
@@ -48,11 +49,13 @@ pub enum ValidationResult {
 
 impl ValidationResult {
     /// Returns `true` if the validation result is valid.
+    #[must_use]
     pub const fn is_valid(&self) -> bool {
         matches!(self, Self::Valid(_))
     }
 
     /// Returns `true` if the validation result is invalid.
+    #[must_use]
     pub const fn is_invalid(&self) -> bool {
         matches!(self, Self::Invalid(_))
     }
@@ -69,6 +72,7 @@ impl ValidationResult {
     }
 
     /// Returns the request if valid, or `None` if invalid.
+    #[must_use]
     pub fn ok(self) -> Option<ParsedRequest> {
         match self {
             Self::Valid(request) => Some(request),
@@ -77,6 +81,7 @@ impl ValidationResult {
     }
 
     /// Returns the error if invalid, or `None` if valid.
+    #[must_use]
     pub fn err(self) -> Option<ValidationError> {
         match self {
             Self::Valid(_) => None,
@@ -122,6 +127,7 @@ impl std::fmt::Debug for ValidatorChain {
 
 impl ValidatorChain {
     /// Create a new empty validator chain.
+    #[must_use]
     pub fn new() -> Self {
         Self { validators: Vec::new() }
     }
@@ -184,11 +190,13 @@ impl ValidatorChain {
     }
 
     /// Returns the number of validators in the chain.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.validators.len()
     }
 
     /// Returns `true` if the chain has no validators.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.validators.is_empty()
     }
@@ -204,11 +212,13 @@ pub struct MethodBlocklist {
 
 impl MethodBlocklist {
     /// Create a new method blocklist validator.
+    #[must_use]
     pub const fn new(methods: Vec<String>) -> Self {
         Self { blocked: methods }
     }
 
     /// Check if a method is blocked.
+    #[must_use]
     pub fn is_blocked(&self, method: &str) -> bool {
         self.blocked.iter().any(|m| m == method)
     }
@@ -238,11 +248,13 @@ pub struct MethodAllowlist {
 
 impl MethodAllowlist {
     /// Create a new method allowlist validator.
+    #[must_use]
     pub const fn new(methods: Vec<String>) -> Self {
         Self { allowed: methods }
     }
 
     /// Check if a method is allowed.
+    #[must_use]
     pub fn is_allowed(&self, method: &str) -> bool {
         self.allowed.iter().any(|m| m == method)
     }
@@ -270,6 +282,7 @@ pub struct MaxParamsValidator {
 
 impl MaxParamsValidator {
     /// Create a new max params validator.
+    #[must_use]
     pub const fn new(max_params: usize) -> Self {
         Self { max_params }
     }
