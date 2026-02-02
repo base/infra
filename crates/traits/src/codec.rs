@@ -11,6 +11,7 @@ pub struct CodecError(pub String);
 
 impl CodecError {
     /// Create a new codec error.
+    #[must_use]
     pub fn new(msg: impl Into<String>) -> Self {
         Self(msg.into())
     }

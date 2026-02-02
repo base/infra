@@ -22,6 +22,7 @@ pub struct ValidationError {
 
 impl ValidationError {
     /// Create a new validation error.
+    #[must_use]
     pub fn new(code: i64, message: impl Into<String>) -> Self {
         Self { code, message: message.into() }
     }
