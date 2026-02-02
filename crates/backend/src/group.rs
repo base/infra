@@ -28,6 +28,7 @@ pub struct BackendGroup {
 
 impl BackendGroup {
     /// Create a new backend group.
+    #[must_use]
     pub fn new(
         name: String,
         backends: Vec<Arc<dyn Backend>>,
