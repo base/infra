@@ -4,10 +4,28 @@ set dotenv-load := true
 # Default service name
 SERVICE := env_var_or_default("SERVICE", "mempool-rebroadcaster")
 
-# Run linting checks
-lint:
-    cargo fmt -- --check
-    cargo clippy --all-targets --all-features -- -D warnings
+# Runs all ci checks
+ci: fix test
+
+# Fixes formatting and clippy issues
+fix: format-fix clippy-fix
+
+# Checks formatting
+check-format:
+    cargo +nightly fmt --all -- --check
+
+# Fixes any formatting issues
+format-fix:
+    cargo fix --allow-dirty --allow-staged --workspace
+    cargo +nightly fmt --all
+
+# Checks clippy
+check-clippy:
+    cargo clippy --workspace --all-targets -- -D warnings
+
+# Fixes any clippy issues
+clippy-fix:
+    cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
 
 # Run tests
 test:
