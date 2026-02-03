@@ -1,35 +1,124 @@
 [workspace]
 resolver = "2"
-members = ["crates/mempool-rebroadcaster", "crates/sidecrush"]
+members = [
+    # Existing services
+    "crates/mempool-rebroadcaster",
+    "crates/sidecrush",
+    # Tips crates
+    "crates/tips/core",
+    "crates/tips/audit",
+    "crates/tips/ingress-rpc",
+    "crates/tips/system-tests",
+    # Tips binaries
+    "bin/tips/audit",
+    "bin/tips/ingress-rpc",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+homepage = "https://github.com/base/infra"
+repository = "https://github.com/base/infra"
+
+[workspace.lints.rust]
+missing-debug-implementations = "warn"
+missing-docs = "warn"
+unreachable-pub = "warn"
+unused-must-use = "deny"
+rust-2018-idioms = "deny"
+unnameable-types = "warn"
+
+[workspace.lints.rustdoc]
+all = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+missing-const-for-fn = "warn"
+use-self = "warn"
+option-if-let-else = "warn"
+redundant-clone = "warn"
 
 [workspace.dependencies]
-clap = { version = "4.0", features = ["derive", "env"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-metrics = "0.24.1"
-metrics-derive = "0.1"
-cadence = "1.4"
+# Internal crates
+tips-core = { path = "crates/tips/core" }
+tips-audit-lib = { path = "crates/tips/audit" }
+tips-ingress-rpc-lib = { path = "crates/tips/ingress-rpc" }
+tips-system-tests = { path = "crates/tips/system-tests" }
+
+# base-reth
+base-reth-rpc-types = { git = "https://github.com/base/base", branch = "main" }
+base-bundles = { git = "https://github.com/base/base", branch = "main" }
+
+# revm
+op-revm = { version = "15.0.0", default-features = false }
+revm-context-interface = { version = "15.0.0", default-features = false }
 
 # alloy
-alloy-primitives = { version = "1.5.2", default-features = false, features = [
-    "map-foldhash",
-] }
-alloy-genesis = { version = "1.5.2", default-features = false }
-alloy-eips = { version = "1.5.2", default-features = false }
-alloy-rpc-types = { version = "1.5.2", default-features = false }
-alloy-rpc-types-engine = { version = "1.5.2", default-features = false }
-alloy-rpc-types-eth = { version = "1.5.2" }
-alloy-consensus = { version = "1.5.2" }
+alloy-serde = { version = "1.0.41", default-features = false }
+alloy-signer = { version = "1.0.41", default-features = false }
+alloy-network = { version = "1.0.41", default-features = false }
+alloy-provider = { version = "1.0.41", default-features = false }
+alloy-consensus = { version = "1.0.41", default-features = false }
+alloy-sol-types = { version = "1.4.1", default-features = false }
+alloy-rpc-types = { version = "1.1.2", default-features = false }
+alloy-primitives = { version = "1.4.1", default-features = false }
+alloy-signer-local = { version = "1.0.41", default-features = false }
+# alloy deps needed by existing services
+alloy-genesis = { version = "1.0.41", default-features = false }
+alloy-eips = { version = "1.0.41", default-features = false }
+alloy-rpc-types-engine = { version = "1.0.41", default-features = false }
+alloy-rpc-types-eth = { version = "1.0.41" }
 alloy-trie = { version = "0.9.1", default-features = false }
-alloy-provider = { version = "1.5.2" }
 alloy-hardforks = { version = "0.5" }
-alloy-rpc-client = { version = "1.5.2" }
-alloy-transport-http = { version = "1.5.2" }
+alloy-rpc-client = { version = "1.0.41" }
+alloy-transport-http = { version = "1.0.41" }
 
 # op-alloy
+op-alloy-flz = { version = "0.13.1", default-features = false }
+op-alloy-network = { version = "0.22.0", default-features = false }
 op-alloy-rpc-types = { version = "0.22.0", default-features = false }
-op-alloy-rpc-types-engine = { version = "0.22.0", default-features = false }
 op-alloy-consensus = { version = "0.22.0", default-features = false }
+op-alloy-rpc-types-engine = { version = "0.22.0", default-features = false }
+
+# tokio
+tokio = { version = "1.47.1", default-features = false }
+
+# async
+async-trait = "0.1.89"
+
+# rpc
+jsonrpsee = { version = "0.26.0", default-features = false }
+
+# kafka and s3
+bytes = { version = "1.8.0", default-features = false }
+rdkafka = { version = "0.37.0", default-features = false }
+aws-config = { version = "1.1.7", default-features = false }
+aws-sdk-s3 = { version = "1.106.0", default-features = false }
+aws-credential-types = { version = "1.1.7", default-features = false }
+
+# misc
+url = { version = "2.5.7", default-features = false }
+axum = { version = "0.8.3", default-features = false }
+serde = { version = "1.0.219", default-features = false }
+uuid = { version = "1.18.1", default-features = false }
+clap = { version = "4.5.47", default-features = false }
+backon = { version = "1.5.2", default-features = false }
+chrono = { version = "0.4.42", default-features = false }
+anyhow = { version = "1.0.99", default-features = false }
+tracing = { version = "0.1.41", default-features = false }
+wiremock = { version = "0.6.2", default-features = false }
+dotenvy = { version = "0.15.7", default-features = false }
+metrics = { version = "0.24.1", default-features = false }
+metrics-derive = { version = "0.1", default-features = false }
+serde_json = { version = "1.0.143", default-features = false }
+testcontainers = { version = "0.23.1", default-features = false }
+tracing-subscriber = { version = "0.3.20", default-features = false }
+testcontainers-modules = { version = "0.11.2", default-features = false }
+metrics-exporter-prometheus = { version = "0.17.0", default-features = false }
+futures = { version = "0.3.31", default-features = false }
+moka = { version = "0.12.12", default-features = false }
+
+# existing service dependencies
+cadence = "1.4"
