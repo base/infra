@@ -105,3 +105,11 @@ run-mempool-rebroadcaster:
 # Run basectl with specified config (mainnet, sepolia, devnet, or path)
 basectl config="mainnet":
     cargo run -p basectl --release -- -c {{config}}
+
+# Run tips audit service
+run-audit:
+    cargo run --bin audit
+
+# Run tips ingress RPC service
+run-ingress-rpc:
+    cargo run --bin ingress-rpc

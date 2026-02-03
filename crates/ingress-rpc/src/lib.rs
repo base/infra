@@ -3,13 +3,16 @@ pub mod metrics;
 pub mod queue;
 pub mod service;
 pub mod validation;
+use std::{
+    net::{IpAddr, SocketAddr},
+    str::FromStr,
+};
+
 use alloy_primitives::TxHash;
 use alloy_provider::{Provider, ProviderBuilder, RootProvider};
+use base_bundles::{AcceptedBundle, MeterBundleResponse};
 use clap::Parser;
 use op_alloy_network::Optimism;
-use std::net::{IpAddr, SocketAddr};
-use std::str::FromStr;
-use tips_core::{AcceptedBundle, MeterBundleResponse};
 use tokio::sync::broadcast;
 use tracing::{error, warn};
 use url::Url;
@@ -54,11 +57,7 @@ pub struct Config {
     pub mempool_url: Url,
 
     /// Method to submit transactions to the mempool
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_TX_SUBMISSION_METHOD",
-        default_value = "mempool"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_TX_SUBMISSION_METHOD", default_value = "mempool")]
     pub tx_submission_method: TxSubmissionMethod,
 
     /// Kafka brokers for publishing mempool events
@@ -66,11 +65,7 @@ pub struct Config {
     pub ingress_kafka_properties: String,
 
     /// Kafka topic for queuing transactions before the DB Writer
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_KAFKA_INGRESS_TOPIC",
-        default_value = "tips-ingress"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_KAFKA_INGRESS_TOPIC", default_value = "tips-ingress")]
     pub ingress_topic: String,
 
     /// Kafka properties file for audit events
@@ -78,41 +73,14 @@ pub struct Config {
     pub audit_kafka_properties: String,
 
     /// Kafka topic for audit events
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_KAFKA_AUDIT_TOPIC",
-        default_value = "tips-audit"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_KAFKA_AUDIT_TOPIC", default_value = "tips-audit")]
     pub audit_topic: String,
-
-    /// Kafka properties file for the user operation consumer
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_KAFKA_USER_OPERATION_CONSUMER_PROPERTIES_FILE"
-    )]
-    pub user_operation_consumer_properties: Option<String>,
-
-    /// Consumer group id for user operation topic (set uniquely per deployment)
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_KAFKA_USER_OPERATION_CONSUMER_GROUP_ID",
-        default_value = "tips-user-operation"
-    )]
-    pub user_operation_consumer_group_id: String,
-
-    /// User operation topic for pushing valid user operations
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_KAFKA_USER_OPERATION_TOPIC",
-        default_value = "tips-user-operation"
-    )]
-    pub user_operation_topic: String,
 
     #[arg(long, env = "TIPS_INGRESS_LOG_LEVEL", default_value = "info")]
     pub log_level: String,
 
     #[arg(long, env = "TIPS_INGRESS_LOG_FORMAT", default_value = "pretty")]
-    pub log_format: tips_core::logger::LogFormat,
+    pub log_format: utils::logger::LogFormat,
 
     /// Default lifetime for sent transactions in seconds (default: 3 hours)
     #[arg(
@@ -127,62 +95,31 @@ pub struct Config {
     pub simulation_rpc: Url,
 
     /// Port to bind the Prometheus metrics server to
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_METRICS_ADDR",
-        default_value = "0.0.0.0:9002"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_METRICS_ADDR", default_value = "0.0.0.0:9002")]
     pub metrics_addr: SocketAddr,
 
     /// Configurable block time in milliseconds (default: 2000 milliseconds)
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_BLOCK_TIME_MILLISECONDS",
-        default_value = "2000"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_BLOCK_TIME_MILLISECONDS", default_value = "2000")]
     pub block_time_milliseconds: u64,
 
     /// Timeout for bundle metering in milliseconds (default: 2000 milliseconds)
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_METER_BUNDLE_TIMEOUT_MS",
-        default_value = "2000"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_METER_BUNDLE_TIMEOUT_MS", default_value = "2000")]
     pub meter_bundle_timeout_ms: u64,
-
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_VALIDATE_USER_OPERATION_TIMEOUT_MS",
-        default_value = "2000"
-    )]
-    pub validate_user_operation_timeout_ms: u64,
 
     /// URLs of the builder RPC service for setting metering information
     #[arg(long, env = "TIPS_INGRESS_BUILDER_RPCS", value_delimiter = ',')]
     pub builder_rpcs: Vec<Url>,
 
     /// Maximum number of `MeterBundleResponse`s to buffer in memory
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_MAX_BUFFERED_METER_BUNDLE_RESPONSES",
-        default_value = "100"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_MAX_BUFFERED_METER_BUNDLE_RESPONSES", default_value = "100")]
     pub max_buffered_meter_bundle_responses: usize,
 
     /// Maximum number of backrun bundles to buffer in memory
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_MAX_BUFFERED_BACKRUN_BUNDLES",
-        default_value = "100"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_MAX_BUFFERED_BACKRUN_BUNDLES", default_value = "100")]
     pub max_buffered_backrun_bundles: usize,
 
     /// Address to bind the health check server to
-    #[arg(
-        long,
-        env = "TIPS_INGRESS_HEALTH_CHECK_ADDR",
-        default_value = "0.0.0.0:8081"
-    )]
+    #[arg(long, env = "TIPS_INGRESS_HEALTH_CHECK_ADDR", default_value = "0.0.0.0:8081")]
     pub health_check_addr: SocketAddr,
 
     /// chain id

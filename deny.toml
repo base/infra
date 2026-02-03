@@ -79,6 +79,11 @@ skip = [
 
     # OP Stack crates (reth uses older versions)
     "op-alloy-consensus",
+    "op-alloy-rpc-types",
+
+    # thiserror 1.x vs 2.x transition
+    "thiserror",
+    "thiserror-impl",
 
     # Proc-macro / derive ecosystem (alloy-tx-macros vs ratatui/instability)
     "darling",

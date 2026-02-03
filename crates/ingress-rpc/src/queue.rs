@@ -1,14 +1,11 @@
-use account_abstraction_core::{
-    MempoolEvent,
-    domain::types::{VersionedUserOperation, WrappedUserOperation},
-};
+use std::sync::Arc;
+
 use alloy_primitives::B256;
 use anyhow::Result;
 use async_trait::async_trait;
 use backon::{ExponentialBuilder, Retryable};
+use base_bundles::AcceptedBundle;
 use rdkafka::producer::{FutureProducer, FutureRecord};
-use std::sync::Arc;
-use tips_core::AcceptedBundle;
 use tokio::time::Duration;
 use tracing::{error, info};
 
@@ -70,39 +67,6 @@ impl MessageQueue for KafkaMessageQueue {
     }
 }
 
-pub struct UserOpQueuePublisher<Q: MessageQueue> {
-    queue: Arc<Q>,
-    topic: String,
-}
-
-impl<Q: MessageQueue> UserOpQueuePublisher<Q> {
-    pub fn new(queue: Arc<Q>, topic: String) -> Self {
-        Self { queue, topic }
-    }
-
-    pub async fn publish(&self, user_op: &VersionedUserOperation, hash: &B256) -> Result<()> {
-        let key = hash.to_string();
-        let event = self.create_user_op_added_event(user_op, hash);
-        let payload = serde_json::to_vec(&event)?;
-        self.queue.publish(&self.topic, &key, &payload).await
-    }
-
-    fn create_user_op_added_event(
-        &self,
-        user_op: &VersionedUserOperation,
-        hash: &B256,
-    ) -> MempoolEvent {
-        let wrapped_user_op = WrappedUserOperation {
-            operation: user_op.clone(),
-            hash: *hash,
-        };
-
-        MempoolEvent::UserOpAdded {
-            user_op: wrapped_user_op,
-        }
-    }
-}
-
 pub struct BundleQueuePublisher<Q: MessageQueue> {
     queue: Arc<Q>,
     topic: String,
@@ -122,12 +86,12 @@ impl<Q: MessageQueue> BundleQueuePublisher<Q> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use audit::test_utils::create_test_meter_bundle_response;
+    use base_bundles::{AcceptedBundle, Bundle, BundleExtensions};
     use rdkafka::config::ClientConfig;
-    use tips_core::{
-        AcceptedBundle, Bundle, BundleExtensions, test_utils::create_test_meter_bundle_response,
-    };
     use tokio::time::{Duration, Instant};
+
+    use super::*;
 
     fn create_test_bundle() -> Bundle {
         Bundle::default()
@@ -144,10 +108,8 @@ mod tests {
 
         let publisher = KafkaMessageQueue::new(producer);
         let bundle = create_test_bundle();
-        let accepted_bundle = AcceptedBundle::new(
-            bundle.try_into().unwrap(),
-            create_test_meter_bundle_response(),
-        );
+        let accepted_bundle =
+            AcceptedBundle::new(bundle.try_into().unwrap(), create_test_meter_bundle_response());
         let bundle_hash = &accepted_bundle.bundle_hash();
 
         let start = Instant::now();
