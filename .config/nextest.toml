@@ -1,0 +1,8 @@
+[test-groups]
+# Limit concurrency for tests that spin up Docker containers (Kafka + MinIO)
+# to avoid resource contention causing container startup failures.
+container-tests = { max-threads = 4 }
+
+[[profile.default.overrides]]
+filter = 'binary_id(audit::s3_test) | binary_id(audit::integration_tests)'
+test-group = 'container-tests'

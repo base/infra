@@ -102,6 +102,6 @@ docker-image:
 run-mempool-rebroadcaster:
     cargo run --bin mempool-rebroadcaster -- --geth-mempool-endpoint {{env_var("GETH_MEMPOOL_ENDPOINT")}} --reth-mempool-endpoint {{env_var("RETH_MEMPOOL_ENDPOINT")}}
 
-# Run basectl with specified config (mainnet, sepolia, devnet, or path)
-basectl config="mainnet":
-    cargo run -p basectl --release -- -c {{config}}
+# Run tips audit service
+run-audit:
+    cargo run --bin audit

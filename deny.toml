@@ -48,10 +48,37 @@ skip = [
     "foldhash",
     "lru",
 
+    # AWS SDK transitive dependencies
+    "aws-smithy-http",
+    "aws-smithy-json",
+
+    # HTTP ecosystem (hyper 0.14 vs 1.x transition)
+    "h2",
+    "http",
+    "http-body",
+    "hyper",
+    "hyper-rustls",
+
+    # TLS/crypto ecosystem
+    "rustls",
+    "rustls-webpki",
+    "tokio-rustls",
+
+    # macOS security framework
+    "core-foundation",
+    "security-framework",
+    "openssl-probe",
+
     # Random number generation
     "rand",
     "rand_chacha",
     "rand_core",
+
+    # Networking
+    "socket2",
+
+    # OP Stack crates (reth uses older versions)
+    "op-alloy-consensus",
 
     # Proc-macro / derive ecosystem (alloy-tx-macros vs ratatui/instability)
     "darling",
