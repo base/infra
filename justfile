@@ -105,3 +105,7 @@ run-mempool-rebroadcaster:
 # Run tips audit service
 run-audit:
     cargo run --bin audit
+
+# Run tips ingress RPC service
+run-ingress-rpc:
+    cargo run --bin ingress-rpc

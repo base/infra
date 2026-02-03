@@ -56,6 +56,7 @@ basectl-cli = { path = "crates/basectl" }
 mempool-rebroadcaster = { path = "crates/mempool-rebroadcaster" }
 sidecrush = { path = "crates/sidecrush" }
 utils = { path = "crates/utils" }
+ingress-rpc = { path = "crates/ingress-rpc" }
 
 # base-reth
 base-bundles = { git = "https://github.com/base/base", branch = "main" }
