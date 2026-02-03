@@ -1,5 +1,5 @@
 [package]
-name = "tips-audit"
+name = "audit-bin"
 version.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -7,9 +7,16 @@ homepage.workspace = true
 repository.workspace = true
 edition.workspace = true
 
+[lints]
+workspace = true
+
+[[bin]]
+name = "audit"
+path = "src/main.rs"
+
 [dependencies]
-tips-core.workspace = true
-tips-audit-lib.workspace = true
+utils.workspace = true
+audit.workspace = true
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true

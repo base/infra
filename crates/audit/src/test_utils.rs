@@ -1,9 +1,10 @@
-use crate::{AcceptedBundle, Bundle, MeterBundleResponse};
+//! Test utilities for creating bundles and transactions.
+
 use alloy_consensus::SignableTransaction;
-use alloy_primitives::{Address, B256, Bytes, TxHash, U256, b256, bytes};
-use alloy_provider::network::TxSignerSync;
-use alloy_provider::network::eip2718::Encodable2718;
+use alloy_primitives::{Address, Bytes, TxHash, U256, b256, bytes};
+use alloy_provider::network::{TxSignerSync, eip2718::Encodable2718};
 use alloy_signer_local::PrivateKeySigner;
+use base_bundles::{AcceptedBundle, Bundle, MeterBundleResponse};
 use op_alloy_consensus::OpTxEnvelope;
 use op_alloy_rpc_types::OpTransactionRequest;
 
@@ -17,12 +18,7 @@ pub const TXN_HASH: TxHash =
 
 pub fn create_bundle_from_txn_data() -> AcceptedBundle {
     AcceptedBundle::new(
-        Bundle {
-            txs: vec![TXN_DATA],
-            ..Default::default()
-        }
-        .try_into()
-        .unwrap(),
+        Bundle { txs: vec![TXN_DATA], ..Default::default() }.try_into().unwrap(),
         create_test_meter_bundle_response(),
     )
 }
@@ -66,7 +62,7 @@ pub fn create_test_bundle(
 pub fn create_test_meter_bundle_response() -> MeterBundleResponse {
     MeterBundleResponse {
         bundle_gas_price: U256::from(0),
-        bundle_hash: B256::default(),
+        bundle_hash: alloy_primitives::B256::default(),
         coinbase_diff: U256::from(0),
         eth_sent_to_coinbase: U256::from(0),
         gas_fees: U256::from(0),

@@ -1,16 +1,14 @@
+use std::net::SocketAddr;
+
 use anyhow::Result;
+use audit::{KafkaAuditArchiver, KafkaAuditLogReader, S3EventReaderWriter, create_kafka_consumer};
 use aws_config::{BehaviorVersion, Region};
 use aws_credential_types::Credentials;
 use aws_sdk_s3::{Client as S3Client, config::Builder as S3ConfigBuilder};
 use clap::{Parser, ValueEnum};
 use rdkafka::consumer::Consumer;
-use std::net::SocketAddr;
-use tips_audit_lib::{
-    KafkaAuditArchiver, KafkaAuditLogReader, S3EventReaderWriter, create_kafka_consumer,
-};
-use tips_core::logger::init_logger_with_format;
-use tips_core::metrics::init_prometheus_exporter;
 use tracing::info;
+use utils::{logger::init_logger_with_format, metrics::init_prometheus_exporter};
 
 #[derive(Debug, Clone, ValueEnum)]
 enum S3ConfigType {
@@ -34,7 +32,7 @@ struct Args {
     log_level: String,
 
     #[arg(long, env = "TIPS_AUDIT_LOG_FORMAT", default_value = "pretty")]
-    log_format: tips_core::logger::LogFormat,
+    log_format: utils::logger::LogFormat,
 
     #[arg(long, env = "TIPS_AUDIT_S3_CONFIG_TYPE", default_value = "aws")]
     s3_config_type: S3ConfigType,

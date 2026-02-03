@@ -1,207 +1,107 @@
-set positional-arguments
+set positional-arguments := true
+set dotenv-load := true
 
+alias t := test
 alias f := fix
-alias c := ci
+alias b := build
+alias c := clean
+alias u := check-udeps
+alias wt := watch-test
+alias wc := watch-check
+
+# Default service name for docker builds
+SERVICE := env_var_or_default("SERVICE", "mempool-rebroadcaster")
 
 # Default to display help menu
 default:
     @just --list
 
 # Runs all ci checks
-ci:
-    cargo fmt --all -- --check
-    cargo clippy -- -D warnings
-    cargo build
-    cargo test
-    cd ui && npx --yes @biomejs/biome check .
-    cd ui && npm run build
+ci: fix check lychee zepter
+
+# Performs lychee checks, installing the lychee command if necessary
+lychee:
+    @command -v lychee >/dev/null 2>&1 || cargo install lychee
+    lychee --config ./lychee.toml .
+
+# Checks formatting, udeps, clippy, and tests
+check: check-format check-udeps check-clippy test check-deny
+
+# Runs cargo deny to check dependencies
+check-deny:
+    @command -v cargo-deny >/dev/null 2>&1 || cargo install cargo-deny
+    cargo deny check bans --hide-inclusion-graph
 
 # Fixes formatting and clippy issues
-fix:
-    cargo fmt --all
-    cargo clippy --fix --allow-dirty --allow-staged
-    cd ui && npx --yes @biomejs/biome check --write --unsafe .
+fix: format-fix clippy-fix zepter-fix
 
-# Resets dependencies and reformats code
-sync: deps-reset sync-env fix
+# Runs zepter feature checks, installing zepter if necessary
+zepter:
+    @command -v zepter >/dev/null 2>&1 || cargo install zepter
+    zepter --version
+    zepter format features
+    zepter
 
-# Copies environment templates and adapts for docker
-sync-env:
-    cp .env.example .env
-    cp .env.example ./ui/.env
-    cp .env.example .env.docker
-    sed -i '' 's/localhost:9092/host.docker.internal:9094/g' ./.env.docker
-    sed -i '' 's/localhost/host.docker.internal/g' ./.env.docker
+# Fixes zepter feature formatting
+zepter-fix:
+    @command -v zepter >/dev/null 2>&1 || cargo install zepter
+    zepter format features --fix
 
-# Stops and removes all docker containers and data
-stop-all:
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.tips.yml && docker compose down && docker compose rm && rm -rf data/
+# Runs tests across workspace with all features enabled
+test:
+    @command -v cargo-nextest >/dev/null 2>&1 || cargo install cargo-nextest
+    RUSTFLAGS="-D warnings" cargo nextest run --workspace --all-features
 
-# Starts all services in docker, useful for demos
-start-all: stop-all
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.tips.yml && mkdir -p data/kafka data/minio && docker compose build && docker compose up -d
+# Checks formatting
+check-format:
+    cargo +nightly fmt --all -- --check
 
-# Starts docker services except specified ones, e.g. just start-except ui ingress-rpc
-start-except programs: stop-all
-    #!/bin/bash
-    all_services=(kafka kafka-setup minio minio-setup ingress-rpc audit ui)
-    exclude_services=({{ programs }})
+# Fixes any formatting issues
+format-fix:
+    cargo fix --allow-dirty --allow-staged --workspace
+    cargo +nightly fmt --all
 
-    # Create result array with services not in exclude list
-    result_services=()
-    for service in "${all_services[@]}"; do
-        skip=false
-        for exclude in "${exclude_services[@]}"; do
-            if [[ "$service" == "$exclude" ]]; then
-                skip=true
-                break
-            fi
-        done
-        if [[ "$skip" == false ]]; then
-            result_services+=("$service")
-        fi
-    done
+# Checks clippy
+check-clippy:
+    cargo clippy --workspace --all-targets -- -D warnings
 
-    export COMPOSE_FILE=docker-compose.yml:docker-compose.tips.yml && mkdir -p data/kafka data/minio && docker compose build && docker compose up -d ${result_services[@]}
+# Fixes any clippy issues
+clippy-fix:
+    cargo clippy --workspace --all-targets --fix --allow-dirty --allow-staged
 
-# Resets docker dependencies with clean data
-deps-reset:
-    COMPOSE_FILE=docker-compose.yml:docker-compose.tips.yml docker compose down && docker compose rm && rm -rf data/ && mkdir -p data/kafka data/minio && docker compose up -d
+# Builds the workspace with release
+build:
+    cargo build --workspace --release
 
-# Restarts docker dependencies without data reset
-deps:
-    COMPOSE_FILE=docker-compose.yml:docker-compose.tips.yml docker compose down && docker compose rm && docker compose up -d
+# Builds all targets in debug mode
+build-all-targets:
+    cargo build --workspace --all-targets
 
-# Runs the tips-audit service
-audit:
-    cargo run --bin tips-audit
+# Cleans the workspace
+clean:
+    cargo clean
 
-# Runs the tips-ingress-rpc service
-ingress-rpc:
-    cargo run --bin tips-ingress-rpc
+# Checks if there are any unused dependencies
+check-udeps:
+    @command -v cargo-udeps >/dev/null 2>&1 || cargo install cargo-udeps
+    cargo +nightly udeps --workspace --all-features --all-targets
 
-# Runs the tips-maintenance service
-maintenance:
-    cargo run --bin tips-maintenance
+# Watches tests
+watch-test:
+    cargo watch -x test
 
-# Runs the tips-ingress-writer service
-ingress-writer:
-    cargo run --bin tips-ingress-writer
+# Watches checks
+watch-check:
+    cargo watch -x "fmt --all -- --check" -x "clippy --all-targets -- -D warnings" -x test
 
-# Starts the UI development server
-ui:
-    cd ui && yarn dev
+# Build Docker image for a service
+docker-image:
+    docker build --platform linux/amd64 --build-arg SERVICE_NAME={{SERVICE}} -t {{SERVICE}} .
 
-sequencer_url := "http://localhost:8547"
-validator_url := "http://localhost:8549"
-builder_url := "http://localhost:2222"
-ingress_url := "http://localhost:8080"
+# Run mempool rebroadcaster service
+run-mempool-rebroadcaster:
+    cargo run --bin mempool-rebroadcaster -- --geth-mempool-endpoint {{env_var("GETH_MEMPOOL_ENDPOINT")}} --reth-mempool-endpoint {{env_var("RETH_MEMPOOL_ENDPOINT")}}
 
-sender := "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
-sender_key := "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
-
-backrunner := "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-backrunner_key := "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
-
-# Queries block numbers from sequencer, validator, and builder
-get-blocks:
-    echo "Sequencer"
-    cast bn -r {{ sequencer_url }}
-    echo "Validator"
-    cast bn -r {{ validator_url }}
-    echo "Builder"
-    cast bn -r {{ builder_url }}
-
-# Sends a test transaction through the ingress endpoint
-send-txn:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    echo "sending txn"
-    nonce=$(cast nonce {{ sender }} -r {{ builder_url }})
-    txn=$(cast mktx --private-key {{ sender_key }} 0x0000000000000000000000000000000000000000 --value 0.01ether --nonce $nonce --chain-id 13 -r {{ builder_url }})
-    hash=$(curl -s {{ ingress_url }} -X POST   -H "Content-Type: application/json" --data "{\"method\":\"eth_sendRawTransaction\",\"params\":[\"$txn\"],\"id\":1,\"jsonrpc\":\"2.0\"}" | jq -r ".result")
-    cast receipt $hash -r {{ sequencer_url }} | grep status
-    cast receipt $hash -r {{ builder_url }} | grep status
-
-# Sends a transaction with a backrun bundle
-send-txn-with-backrun:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-
-    # 1. Get nonce and send target transaction from sender account
-    nonce=$(cast nonce {{ sender }} -r {{ builder_url }})
-    echo "Sending target transaction from sender (nonce=$nonce)..."
-    target_txn=$(cast mktx --private-key {{ sender_key }} \
-        0x0000000000000000000000000000000000000000 \
-        --value 0.01ether \
-        --nonce $nonce \
-        --chain-id 13 \
-        -r {{ builder_url }})
-
-    target_hash=$(curl -s {{ ingress_url }} -X POST \
-        -H "Content-Type: application/json" \
-        --data "{\"method\":\"eth_sendRawTransaction\",\"params\":[\"$target_txn\"],\"id\":1,\"jsonrpc\":\"2.0\"}" \
-        | jq -r ".result")
-    echo "Target tx sent: $target_hash"
-
-    # 2. Build backrun transaction from backrunner account (different account!)
-    backrun_nonce=$(cast nonce {{ backrunner }} -r {{ builder_url }})
-    echo "Building backrun transaction from backrunner (nonce=$backrun_nonce)..."
-    backrun_txn=$(cast mktx --private-key {{ backrunner_key }} \
-        0x0000000000000000000000000000000000000001 \
-        --value 0.001ether \
-        --nonce $backrun_nonce \
-        --chain-id 13 \
-        -r {{ builder_url }})
-
-    # 3. Compute tx hashes for reverting_tx_hashes
-    backrun_hash_computed=$(cast keccak $backrun_txn)
-    echo "Target tx hash: $target_hash"
-    echo "Backrun tx hash: $backrun_hash_computed"
-
-    # 4. Construct and send bundle with reverting_tx_hashes
-    echo "Sending backrun bundle..."
-    bundle_json=$(jq -n \
-        --arg target "$target_txn" \
-        --arg backrun "$backrun_txn" \
-        --arg target_hash "$target_hash" \
-        --arg backrun_hash "$backrun_hash_computed" \
-        '{
-            txs: [$target, $backrun],
-            blockNumber: 0,
-            revertingTxHashes: [$target_hash, $backrun_hash]
-        }')
-
-    bundle_hash=$(curl -s {{ ingress_url }} -X POST \
-        -H "Content-Type: application/json" \
-        --data "{\"method\":\"eth_sendBackrunBundle\",\"params\":[$bundle_json],\"id\":1,\"jsonrpc\":\"2.0\"}" \
-        | jq -r ".result")
-    echo "Bundle sent: $bundle_hash"
-
-    # 5. Wait and verify both transactions
-    echo "Waiting for transactions to land..."
-    sleep 5
-
-    echo "=== Target transaction (from sender) ==="
-    cast receipt $target_hash -r {{ sequencer_url }} | grep -E "(status|blockNumber|transactionIndex)"
-
-    echo "=== Backrun transaction (from backrunner) ==="
-    cast receipt $backrun_hash_computed -r {{ sequencer_url }} | grep -E "(status|blockNumber|transactionIndex)" || echo "Backrun tx not found yet"
-
-# Runs integration tests with infrastructure checks
-e2e:
-    #!/bin/bash
-    if ! INTEGRATION_TESTS=1 cargo test --package tips-system-tests --test integration_tests; then
-        echo ""
-        echo "═══════════════════════════════════════════════════════════════════"
-        echo "  ⚠️  Integration tests failed!"
-        echo "  Make sure the infrastructure is running locally (see SETUP.md for full instructions): "
-        echo "      just start-all"
-        echo "      start builder-playground"
-        echo "      start op-rbuilder"
-        echo "═══════════════════════════════════════════════════════════════════"
-        exit 1
-    fi
-    echo "═══════════════════════════════════════════════════════════════════"
-    echo "  ✅ Integration tests passed!"
-    echo "═══════════════════════════════════════════════════════════════════"
+# Run basectl with specified config (mainnet, sepolia, devnet, or path)
+basectl config="mainnet":
+    cargo run -p basectl --release -- -c {{config}}

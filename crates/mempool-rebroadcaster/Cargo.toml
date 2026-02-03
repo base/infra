@@ -14,7 +14,8 @@ path = "src/lib.rs"
 serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
-tokio = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["fmt", "std", "json", "env-filter"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 # alloy
 alloy-primitives.workspace = true
@@ -23,4 +24,5 @@ alloy-rpc-types = { workspace = true, features = ["txpool"] }
 alloy-rpc-types-eth.workspace = true
 alloy-consensus.workspace = true
 alloy-trie.workspace = true
-alloy-provider = { workspace = true, features = ["txpool-api"] }
+alloy-provider = { workspace = true, features = ["txpool-api", "reqwest"] }
+

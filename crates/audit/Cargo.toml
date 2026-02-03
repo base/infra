@@ -1,5 +1,5 @@
 [package]
-name = "tips-audit-lib"
+name = "audit"
 version.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -15,7 +15,8 @@ bytes.workspace = true
 metrics.workspace = true
 async-trait.workspace = true
 metrics-derive.workspace = true
-tips-core = { workspace = true, features = ["test-utils"] }
+base-bundles.workspace = true
+utils = { workspace = true }
 serde = { workspace = true, features = ["std", "derive"] }
 tokio = { workspace = true, features = ["full"] }
 uuid = { workspace = true, features = ["v5", "serde"] }
@@ -24,10 +25,16 @@ anyhow = { workspace = true, features = ["std"] }
 serde_json = { workspace = true, features = ["std"] }
 rdkafka = { workspace = true, features = ["tokio", "libz", "zstd", "ssl-vendored"] }
 alloy-consensus = { workspace = true, features = ["std"] }
+alloy-provider = { workspace = true }
 alloy-primitives = { workspace = true, features = ["map-foldhash", "serde"] }
 aws-sdk-s3 = { workspace = true, features = ["rustls", "default-https-client", "rt-tokio"] }
 futures = { workspace = true }
+alloy-signer-local = { workspace = true }
+op-alloy-consensus = { workspace = true }
+op-alloy-rpc-types = { workspace = true }
 
 [dev-dependencies]
+audit = { workspace = true }
 testcontainers = { workspace = true, features = ["blocking"] }
 testcontainers-modules = { workspace = true, features = ["postgres", "kafka", "minio"] }
+aws-config = { workspace = true, features = ["default-https-client", "rt-tokio"] }

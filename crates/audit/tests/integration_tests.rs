@@ -1,17 +1,19 @@
-use alloy_primitives::{Address, B256, U256};
+#![allow(missing_docs)]
+
 use std::time::Duration;
-use tips_audit_lib::{
-    KafkaAuditArchiver, KafkaAuditLogReader, KafkaUserOpAuditLogReader, UserOpEventReader,
-    publisher::{
-        BundleEventPublisher, KafkaBundleEventPublisher, KafkaUserOpEventPublisher,
-        UserOpEventPublisher,
-    },
-    storage::{BundleEventS3Reader, S3EventReaderWriter},
-    types::{BundleEvent, DropReason, UserOpEvent},
+
+use alloy_primitives::{Address, B256, U256};
+use audit::{
+    BundleEvent, BundleEventPublisher, BundleEventS3Reader, DropReason, KafkaAuditArchiver,
+    KafkaAuditLogReader, KafkaBundleEventPublisher, KafkaUserOpAuditLogReader,
+    KafkaUserOpEventPublisher, S3EventReaderWriter, UserOpEvent, UserOpEventPublisher,
+    UserOpEventReader, test_utils::create_bundle_from_txn_data,
 };
-use tips_core::{BundleExtensions, test_utils::create_bundle_from_txn_data};
+use base_bundles::BundleExtensions;
 use uuid::Uuid;
+
 mod common;
+
 use common::TestHarness;
 
 #[tokio::test]
@@ -27,19 +29,13 @@ async fn test_kafka_publisher_s3_archiver_integration()
     let bundle = create_bundle_from_txn_data();
     let test_bundle_id = Uuid::new_v5(&Uuid::NAMESPACE_OID, bundle.bundle_hash().as_slice());
     let test_events = [
-        BundleEvent::Received {
-            bundle_id: test_bundle_id,
-            bundle: Box::new(bundle.clone()),
-        },
-        BundleEvent::Dropped {
-            bundle_id: test_bundle_id,
-            reason: DropReason::TimedOut,
-        },
+        BundleEvent::Received { bundle_id: test_bundle_id, bundle: Box::new(bundle.clone()) },
+        BundleEvent::Dropped { bundle_id: test_bundle_id, reason: DropReason::TimedOut },
     ];
 
     let publisher = KafkaBundleEventPublisher::new(harness.kafka_producer, topic.to_string());
 
-    for event in test_events.iter() {
+    for event in &test_events {
         publisher.publish(event.clone()).await?;
     }
 
@@ -48,6 +44,7 @@ async fn test_kafka_publisher_s3_archiver_integration()
         s3_writer.clone(),
         1,
         100,
+        false,
     );
 
     tokio::spawn(async move {
@@ -59,22 +56,19 @@ async fn test_kafka_publisher_s3_archiver_integration()
     loop {
         counter += 1;
         if counter > 10 {
-            assert!(false, "unable to complete archiving within the deadline");
+            panic!("unable to complete archiving within the deadline");
         }
 
         tokio::time::sleep(Duration::from_secs(1)).await;
         let bundle_history = s3_writer.get_bundle_history(test_bundle_id).await?;
 
-        if bundle_history.is_some() {
-            let history = bundle_history.unwrap();
+        if let Some(history) = bundle_history {
             if history.history.len() != test_events.len() {
                 continue;
-            } else {
-                break;
             }
-        } else {
-            continue;
+            break;
         }
+        continue;
     }
 
     Ok(())
@@ -108,12 +102,7 @@ async fn test_userop_kafka_publisher_reader_integration()
     assert_eq!(received.event.user_op_hash(), test_user_op_hash);
 
     match received.event {
-        UserOpEvent::AddedToMempool {
-            user_op_hash,
-            sender,
-            entry_point,
-            nonce,
-        } => {
+        UserOpEvent::AddedToMempool { user_op_hash, sender, entry_point, nonce } => {
             assert_eq!(user_op_hash, test_user_op_hash);
             assert_eq!(sender, test_sender);
             assert_eq!(entry_point, test_entry_point);
