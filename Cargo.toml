@@ -71,6 +71,8 @@ string-lit-as-bytes = "warn"
 # Internal crates
 tips-core = { path = "crates/tips/core" }
 tips-audit-lib = { path = "crates/tips/audit" }
+tips-ingress-rpc-lib = { path = "crates/tips/ingress-rpc" }
+tips-system-tests = { path = "crates/tips/system-tests" }
 
 # base-reth
 base-reth-rpc-types = { git = "https://github.com/base/base", branch = "main" }
