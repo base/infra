@@ -101,3 +101,11 @@ docker-image:
 # Run mempool rebroadcaster service
 run-mempool-rebroadcaster:
     cargo run -p mempool-rebroadcaster -- --geth-mempool-endpoint {{env_var("GETH_MEMPOOL_ENDPOINT")}} --reth-mempool-endpoint {{env_var("RETH_MEMPOOL_ENDPOINT")}}
+
+# Run tips audit service
+run-tips-audit:
+    cargo run -p tips-audit
+
+# Run tips ingress RPC service
+run-tips-ingress-rpc:
+    cargo run -p tips-ingress-rpc
