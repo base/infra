@@ -5,7 +5,7 @@ use alloy_primitives::{Address, B256};
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types_eth::{BlockNumberOrTag, TransactionTrait};
 use anyhow::Result;
-use base_flashtypes::Flashblock;
+use base_primitives::flashblocks::Flashblock;
 use futures_util::{StreamExt, stream};
 use op_alloy_network::Optimism;
 use tokio::sync::mpsc;
