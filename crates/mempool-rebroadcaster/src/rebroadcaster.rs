@@ -3,7 +3,10 @@ use std::{collections::HashMap, error::Error};
 use alloy_consensus::Transaction;
 use alloy_eips::{
     Encodable2718,
-    eip2718::{EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP7702_TX_TYPE_ID, LEGACY_TX_TYPE_ID},
+    eip2718::{
+        EIP1559_TX_TYPE_ID, EIP2930_TX_TYPE_ID, EIP4844_TX_TYPE_ID, EIP7702_TX_TYPE_ID,
+        LEGACY_TX_TYPE_ID,
+    },
 };
 use alloy_primitives::B256;
 use alloy_provider::{Provider, ProviderBuilder, RootProvider, ext::TxPoolApi};
@@ -209,7 +212,7 @@ impl Rebroadcaster {
                 }
                 txn.gas_price().unwrap() < gas_price
             }
-            EIP1559_TX_TYPE_ID | EIP7702_TX_TYPE_ID => {
+            EIP1559_TX_TYPE_ID | EIP4844_TX_TYPE_ID | EIP7702_TX_TYPE_ID => {
                 if txn.max_priority_fee_per_gas().is_none() {
                     return true;
                 }
