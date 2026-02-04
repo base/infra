@@ -292,11 +292,18 @@ mod tests {
     fn mock_metrics() -> HealthcheckMetrics {
         use cadence::{StatsdClient, UdpMetricSink};
         use std::net::UdpSocket;
-        let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-        socket.set_nonblocking(true).unwrap();
-        let sink = UdpMetricSink::from("127.0.0.1:8125", socket).unwrap();
-        let statsd_client = StatsdClient::from_sink("test", sink);
-        HealthcheckMetrics::new(statsd_client)
+
+        let socket1 = UdpSocket::bind("0.0.0.0:0").unwrap();
+        socket1.set_nonblocking(true).unwrap();
+        let sink1 = UdpMetricSink::from("127.0.0.1:8125", socket1).unwrap();
+        let client = StatsdClient::from_sink("base.blocks", sink1);
+
+        let socket2 = UdpSocket::bind("0.0.0.0:0").unwrap();
+        socket2.set_nonblocking(true).unwrap();
+        let sink2 = UdpMetricSink::from("127.0.0.1:8125", socket2).unwrap();
+        let volume_client = StatsdClient::from_sink("", sink2);
+
+        HealthcheckMetrics::new(client, volume_client)
     }
 
     #[tokio::test(flavor = "current_thread")]

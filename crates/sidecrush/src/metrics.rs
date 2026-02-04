@@ -15,51 +15,64 @@ const METRIC_LATEST_BLOCK_NUMBER: &str = "latest_block_number";
 // Provisioning gate file - metrics are only collected after node is ready
 const READY_FILE: &str = "/app/assets/ready";
 
-/// Metrics client wrapper for block building health checks
-/// Emits metrics every 2 seconds via status heartbeat (independent of poll frequency)
+/// Metrics client wrapper for block building health checks.
+/// Uses two clients to match metric naming conventions:
+/// - `client`: prefixed with "base.blocks" for health counters + latest_block_number
+/// - `volume_client`: no prefix for node_service.agent.* metrics (matches Go Health Service)
 #[derive(Clone, Debug)]
 pub struct HealthcheckMetrics {
+    /// Prefixed client for base.blocks.* metrics
     client: Arc<StatsdClient>,
+    /// Unprefixed client for node_service.agent.* metrics
+    volume_client: Arc<StatsdClient>,
 }
 
 impl HealthcheckMetrics {
-    pub fn new(client: StatsdClient) -> Self {
+    pub fn new(client: StatsdClient, volume_client: StatsdClient) -> Self {
         Self {
             client: Arc::new(client),
+            volume_client: Arc::new(volume_client),
         }
     }
 
     /// Increment status_healthy counter (2s heartbeat)
+    /// Emits: base.blocks.healthy
     pub fn increment_status_healthy(&self) {
         let _ = self.client.count("healthy", 1);
     }
 
     /// Increment status_delayed counter (2s heartbeat)
+    /// Emits: base.blocks.delayed
     pub fn increment_status_delayed(&self) {
         let _ = self.client.count("delayed", 1);
     }
 
     /// Increment status_unhealthy counter (2s heartbeat)
+    /// Emits: base.blocks.unhealthy
     pub fn increment_status_unhealthy(&self) {
         let _ = self.client.count("unhealthy", 1);
     }
 
     /// Increment status_error counter (2s heartbeat)
+    /// Emits: base.blocks.error
     pub fn increment_status_error(&self) {
         let _ = self.client.count("error", 1);
     }
 
-    /// Emit volume free bytes gauge
+    /// Emit volume free bytes gauge (no prefix, matches Go)
+    /// Emits: node_service.agent.volume_free_bytes
     pub fn gauge_volume_free(&self, bytes: u64) {
-        let _ = self.client.gauge(METRIC_VOLUME_FREE_BYTES, bytes);
+        let _ = self.volume_client.gauge(METRIC_VOLUME_FREE_BYTES, bytes);
     }
 
-    /// Emit volume total bytes gauge
+    /// Emit volume total bytes gauge (no prefix, matches Go)
+    /// Emits: node_service.agent.volume_total_bytes
     pub fn gauge_volume_total(&self, bytes: u64) {
-        let _ = self.client.gauge(METRIC_VOLUME_TOTAL_BYTES, bytes);
+        let _ = self.volume_client.gauge(METRIC_VOLUME_TOTAL_BYTES, bytes);
     }
 
     /// Emit latest block number gauge
+    /// Emits: base.blocks.latest_block_number
     pub fn gauge_latest_block(&self, block_num: u64) {
         let _ = self.client.gauge(METRIC_LATEST_BLOCK_NUMBER, block_num);
     }
@@ -199,11 +212,19 @@ mod tests {
     }
 
     fn mock_metrics() -> HealthcheckMetrics {
-        let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-        socket.set_nonblocking(true).unwrap();
-        let sink = UdpMetricSink::from("127.0.0.1:8125", socket).unwrap();
-        let statsd_client = StatsdClient::from_sink("test", sink);
-        HealthcheckMetrics::new(statsd_client)
+        // Prefixed client for health counters
+        let socket1 = UdpSocket::bind("0.0.0.0:0").unwrap();
+        socket1.set_nonblocking(true).unwrap();
+        let sink1 = UdpMetricSink::from("127.0.0.1:8125", socket1).unwrap();
+        let client = StatsdClient::from_sink("base.blocks", sink1);
+
+        // Unprefixed client for volume metrics
+        let socket2 = UdpSocket::bind("0.0.0.0:0").unwrap();
+        socket2.set_nonblocking(true).unwrap();
+        let sink2 = UdpMetricSink::from("127.0.0.1:8125", socket2).unwrap();
+        let volume_client = StatsdClient::from_sink("", sink2);
+
+        HealthcheckMetrics::new(client, volume_client)
     }
 
     #[test]

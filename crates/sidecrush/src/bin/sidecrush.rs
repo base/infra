@@ -159,11 +159,10 @@ fn init_logging(log_format: &str, log_level: Level) {
     }
 }
 
-fn create_statsd_client() -> StatsdClient {
-    // Use DD_AGENT_HOST if set (Kubernetes), otherwise localhost
+/// Create a StatsD client with the given prefix and standard Codeflow tags.
+fn create_statsd_client_with_prefix(prefix: &str) -> StatsdClient {
     let statsd_host = std::env::var("DD_AGENT_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let statsd_addr = format!("{}:8125", statsd_host);
-    tracing::info!(address = %statsd_addr, "Connecting to StatsD agent");
 
     let socket = UdpSocket::bind("0.0.0.0:0").expect("failed to bind UDP socket");
     socket
@@ -172,7 +171,6 @@ fn create_statsd_client() -> StatsdClient {
     let sink =
         UdpMetricSink::from(statsd_addr.as_str(), socket).expect("failed to create StatsD sink");
 
-    // Read tags from CODEFLOW environment variables
     let config_name =
         std::env::var("CODEFLOW_CONFIG_NAME").unwrap_or_else(|_| "unknown".to_string());
     let environment =
@@ -182,29 +180,49 @@ fn create_statsd_client() -> StatsdClient {
     let service_name =
         std::env::var("CODEFLOW_SERVICE_NAME").unwrap_or_else(|_| "unknown".to_string());
 
-    let client = StatsdClient::builder("base.blocks", sink)
+    StatsdClient::builder(prefix, sink)
         .with_tag("configname", &config_name)
         .with_tag("environment", &environment)
         .with_tag("projectname", &project_name)
         .with_tag("servicename", &service_name)
-        .build();
+        .build()
+}
+
+/// Create both StatsD clients needed for metrics.
+fn create_statsd_clients() -> (StatsdClient, StatsdClient) {
+    let statsd_host = std::env::var("DD_AGENT_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    tracing::info!(address = %format!("{}:8125", statsd_host), "Connecting to StatsD agent");
+
+    // Prefixed client for base.blocks.* metrics (health counters, latest_block_number)
+    let client = create_statsd_client_with_prefix("base.blocks");
+    // Unprefixed client for node_service.agent.* metrics (volume stats)
+    let volume_client = create_statsd_client_with_prefix("");
+
+    let config_name =
+        std::env::var("CODEFLOW_CONFIG_NAME").unwrap_or_else(|_| "unknown".to_string());
+    let environment =
+        std::env::var("CODEFLOW_ENVIRONMENT").unwrap_or_else(|_| "unknown".to_string());
+    let project_name =
+        std::env::var("CODEFLOW_PROJECT_NAME").unwrap_or_else(|_| "unknown".to_string());
+    let service_name =
+        std::env::var("CODEFLOW_SERVICE_NAME").unwrap_or_else(|_| "unknown".to_string());
 
     tracing::info!(
         configname = %config_name,
         environment = %environment,
         projectname = %project_name,
         servicename = %service_name,
-        "Initialized StatsD client with tags"
+        "Initialized StatsD clients with tags"
     );
 
-    client
+    (client, volume_client)
 }
 
 async fn run_daemon(args: DaemonArgs) -> anyhow::Result<()> {
     init_logging(&args.log_format, args.log_level);
 
-    let statsd_client = create_statsd_client();
-    let metrics = HealthcheckMetrics::new(statsd_client);
+    let (client, volume_client) = create_statsd_clients();
+    let metrics = HealthcheckMetrics::new(client, volume_client);
 
     // Resolve configuration with backward compatibility
     let node_url = args.resolve_node_url();
