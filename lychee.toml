@@ -1,0 +1,10 @@
+verbose = "debug"
+no_progress = false
+exclude_all_private = false
+accept = [200, 403] 
+exclude_path = []
+exclude = [
+    'foo.bar',
+    'localhost',
+    'https://rustup.rs/',
+]

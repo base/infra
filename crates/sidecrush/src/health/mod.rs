@@ -8,12 +8,11 @@ pub mod engine;
 pub mod fork;
 pub mod wrappers;
 
+use async_trait::async_trait;
 pub use block_age::{BlockAgeCheck, BlockAgeConfig};
 pub use engine::{HealthEngine, Role};
 pub use fork::ForkCheck;
 pub use wrappers::{OnceHealthyAlwaysHealthy, SharedHealthCheck};
-
-use async_trait::async_trait;
 
 /// Health status codes matching the existing blockbuilding healthcheck values.
 /// These map to HTTP status codes for K8s probes:

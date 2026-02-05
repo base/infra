@@ -3,9 +3,10 @@
 //! Ports the JSON-RPC calls from `base/agent/service/service/sequencer_checker.go`.
 //! The Conductor is the OP Stack component that manages sequencer leadership.
 
+use std::time::Duration;
+
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 /// Information about the current leader from `conductor_leaderWithID`.
 #[derive(Debug, Clone, Deserialize)]
@@ -54,23 +55,12 @@ impl ConductorClient {
             .build()
             .expect("failed to build HTTP client");
 
-        Self {
-            client,
-            url: url.into(),
-        }
+        Self { client, url: url.into() }
     }
 
     /// Make a JSON-RPC call and return the result.
-    async fn call<T: for<'de> Deserialize<'de>>(
-        &self,
-        method: &str,
-    ) -> Result<T, ConductorError> {
-        let request = JsonRpcRequest {
-            jsonrpc: "2.0",
-            method,
-            params: vec![],
-            id: 1,
-        };
+    async fn call<T: for<'de> Deserialize<'de>>(&self, method: &str) -> Result<T, ConductorError> {
+        let request = JsonRpcRequest { jsonrpc: "2.0", method, params: vec![], id: 1 };
 
         let response = self
             .client
@@ -84,21 +74,14 @@ impl ConductorClient {
             return Err(ConductorError::Http(response.status().as_u16()));
         }
 
-        let rpc_response: JsonRpcResponse<T> = response
-            .json()
-            .await
-            .map_err(|e| ConductorError::Parse(e.to_string()))?;
+        let rpc_response: JsonRpcResponse<T> =
+            response.json().await.map_err(|e| ConductorError::Parse(e.to_string()))?;
 
         if let Some(error) = rpc_response.error {
-            return Err(ConductorError::Rpc {
-                code: error.code,
-                message: error.message,
-            });
+            return Err(ConductorError::Rpc { code: error.code, message: error.message });
         }
 
-        rpc_response
-            .result
-            .ok_or_else(|| ConductorError::Parse("missing result field".to_string()))
+        rpc_response.result.ok_or_else(|| ConductorError::Parse("missing result field".to_string()))
     }
 
     /// Check if this node is the current leader.
@@ -176,10 +159,7 @@ mod tests {
         let err = ConductorError::Http(500);
         assert_eq!(err.to_string(), "HTTP error: 500");
 
-        let err = ConductorError::Rpc {
-            code: -32600,
-            message: "Invalid Request".to_string(),
-        };
+        let err = ConductorError::Rpc { code: -32600, message: "Invalid Request".to_string() };
         assert_eq!(err.to_string(), "RPC error -32600: Invalid Request");
     }
 }

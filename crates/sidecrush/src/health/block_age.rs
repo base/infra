@@ -3,14 +3,18 @@
 //! Ports `MaxBlockAgeStrategy` from `base/agent/service/service/strategy.go`.
 //! Checks if the latest block is within an acceptable age threshold.
 
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    sync::atomic::{AtomicBool, AtomicU64, Ordering},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use async_trait::async_trait;
 use tracing::{debug, info};
 
-use crate::blockbuilding_healthcheck::EthClient;
-use crate::health::{HealthCheck, HealthStatus};
+use crate::{
+    blockbuilding_healthcheck::EthClient,
+    health::{HealthCheck, HealthStatus},
+};
 
 /// Configuration for the block age health check.
 #[derive(Debug, Clone)]
@@ -27,11 +31,7 @@ pub struct BlockAgeConfig {
 
 impl BlockAgeConfig {
     pub fn new(max_block_age: Duration) -> Self {
-        Self {
-            max_block_age,
-            max_block_age_predeploy: None,
-            wait_for_blocks: 0,
-        }
+        Self { max_block_age, max_block_age_predeploy: None, wait_for_blocks: 0 }
     }
 
     pub fn with_predeploy(mut self, max_block_age_predeploy: Duration) -> Self {
@@ -79,18 +79,13 @@ impl<C: EthClient> BlockAgeCheck<C> {
 
     /// Evaluate health based on the given block timestamp and number.
     fn evaluate_health(&self, block_timestamp: u64, block_number: u64) -> HealthStatus {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or(Duration::ZERO)
-            .as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or(Duration::ZERO).as_secs();
 
         let block_age = Duration::from_secs(now.saturating_sub(block_timestamp));
 
         // Determine which threshold to use
         let threshold = if !self.has_been_healthy.load(Ordering::Relaxed) {
-            self.config
-                .max_block_age_predeploy
-                .unwrap_or(self.config.max_block_age)
+            self.config.max_block_age_predeploy.unwrap_or(self.config.max_block_age)
         } else {
             self.config.max_block_age
         };
@@ -123,11 +118,7 @@ impl<C: EthClient> BlockAgeCheck<C> {
             let required_block = first_healthy + self.config.wait_for_blocks;
 
             if block_number < required_block {
-                debug!(
-                    current = block_number,
-                    required = required_block,
-                    "waiting for blocks"
-                );
+                debug!(current = block_number, required = required_block, "waiting for blocks");
                 // Still waiting - return Delayed (not Unhealthy) since the block IS fresh.
                 // This passes K8s probes but signals we're in a transitional state.
                 // Note: Go code has inverted logic here which appears to be a bug.
@@ -136,11 +127,7 @@ impl<C: EthClient> BlockAgeCheck<C> {
             }
 
             // We've reached the required block count
-            info!(
-                current = block_number,
-                required = required_block,
-                "passed block wait"
-            );
+            info!(current = block_number, required = required_block, "passed block wait");
             self.waiting_for_blocks.store(false, Ordering::Relaxed);
         }
 
@@ -175,9 +162,10 @@ impl<C: EthClient + 'static> HealthCheck for BlockAgeCheck<C> {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
     use crate::blockbuilding_healthcheck::HeaderSummary;
-    use std::sync::{Arc, Mutex};
 
     #[derive(Clone)]
     struct MockClient {
@@ -201,10 +189,7 @@ mod tests {
     }
 
     fn now_secs() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
     }
 
     #[tokio::test]
@@ -248,8 +233,8 @@ mod tests {
             hash: None,
         }));
         let client = MockClient { header };
-        let config = BlockAgeConfig::new(Duration::from_secs(30))
-            .with_predeploy(Duration::from_secs(300)); // 5 minute predeploy threshold
+        let config =
+            BlockAgeConfig::new(Duration::from_secs(30)).with_predeploy(Duration::from_secs(300)); // 5 minute predeploy threshold
         let check = BlockAgeCheck::new(client, config);
 
         // Should be healthy because we're in predeploy mode with larger threshold
@@ -266,9 +251,7 @@ mod tests {
             transaction_count: 0,
             hash: None,
         }));
-        let client = MockClient {
-            header: header.clone(),
-        };
+        let client = MockClient { header: header.clone() };
         let config = BlockAgeConfig::new(Duration::from_secs(30)).with_wait_for_blocks(10);
         let check = BlockAgeCheck::new(client, config);
 

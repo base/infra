@@ -3,9 +3,13 @@
 //! The engine runs checks on a configurable interval and maintains
 //! an aggregated health status that can be read without locks.
 
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, AtomicU8, Ordering},
+    },
+    time::Duration,
+};
 
 use tokio::time::interval;
 use tracing::{debug, info, warn};
@@ -111,8 +115,7 @@ impl HealthEngine {
     /// Run all checks once and update the aggregated status.
     pub async fn run_checks(&self) {
         if self.force_healthy.load(Ordering::Relaxed) {
-            self.status
-                .store(HealthStatus::Healthy.code(), Ordering::Relaxed);
+            self.status.store(HealthStatus::Healthy.code(), Ordering::Relaxed);
             return;
         }
 
@@ -170,9 +173,11 @@ impl HealthEngine {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use async_trait::async_trait;
     use std::sync::atomic::AtomicU8;
+
+    use async_trait::async_trait;
+
+    use super::*;
 
     struct MockCheck {
         name: &'static str,
@@ -181,10 +186,7 @@ mod tests {
 
     impl MockCheck {
         fn new(name: &'static str, status: HealthStatus) -> Self {
-            Self {
-                name,
-                status: AtomicU8::new(status.code()),
-            }
+            Self { name, status: AtomicU8::new(status.code()) }
         }
 
         fn set_status(&self, status: HealthStatus) {
@@ -299,10 +301,7 @@ mod tests {
 
         // Both engine and handle should see the same status
         assert_eq!(engine.current_status(), HealthStatus::Delayed);
-        assert_eq!(
-            HealthStatus::from_code(handle.load(Ordering::Relaxed)),
-            HealthStatus::Delayed
-        );
+        assert_eq!(HealthStatus::from_code(handle.load(Ordering::Relaxed)), HealthStatus::Delayed);
     }
 
     #[test]

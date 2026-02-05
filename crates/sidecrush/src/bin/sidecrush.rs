@@ -1,26 +1,20 @@
-//! Sidecrush - Unified sidecar daemon for Base nodes.
-//!
-//! Subcommands:
-//! - `daemon` - Run the health check daemon with HTTP server
-//! - `init` - Initialize node (snapshots, JWT) [future]
-//! - `ctl` - Control operations (transfer leader, etc) [future]
-
-use std::net::SocketAddr;
-use std::sync::atomic::AtomicU8;
-use std::sync::Arc;
+use std::{
+    net::{SocketAddr, UdpSocket},
+    sync::{Arc, atomic::AtomicU8},
+};
 
 use cadence::{StatsdClient, UdpMetricSink};
 use clap::{Parser, Subcommand};
-use std::net::UdpSocket;
+use sidecrush::{
+    api::{AppState, create_router},
+    blockbuilding_healthcheck::{
+        BlockProductionHealthChecker, HealthcheckConfig, Node, alloy_client::AlloyEthClient,
+    },
+    health::HealthStatus,
+    metrics::HealthcheckMetrics,
+};
 use tokio::net::TcpListener;
 use tracing::Level;
-
-use sidecrush::api::{create_router, AppState};
-use sidecrush::blockbuilding_healthcheck::{
-    alloy_client::AlloyEthClient, BlockProductionHealthChecker, HealthcheckConfig, Node,
-};
-use sidecrush::health::HealthStatus;
-use sidecrush::metrics::HealthcheckMetrics;
 
 #[derive(Parser, Debug)]
 #[command(name = "sidecrush", author, version, about = "Unified sidecar daemon for Base nodes")]
@@ -67,8 +61,8 @@ struct DaemonArgs {
     grace_period_ms: u64,
 
     /// Threshold in milliseconds to consider unhealthy/stalled
-    #[arg(long, env = "SIDECRUSH_UNHEALTHY_THRESHOLD_MS", default_value_t = 3000)]
-    unhealthy_threshold_ms: u64,
+    #[arg(long, env = "BBHC_SIDECAR_UNHEALTHY_NODE_THRESHOLD_MS", default_value_t = 3000u64)]
+    unhealthy_node_threshold_ms: u64,
 
     /// Treat node as a new instance on startup (suppresses initial errors until healthy)
     #[arg(long, env = "SIDECRUSH_NEW_INSTANCE", default_value_t = true)]
@@ -128,7 +122,7 @@ impl DaemonArgs {
                 return ms;
             }
         }
-        self.unhealthy_threshold_ms
+        self.unhealthy_node_threshold_ms
     }
 }
 
@@ -148,14 +142,9 @@ struct CtlArgs {
 
 fn init_logging(log_format: &str, log_level: Level) {
     if log_format.to_lowercase() == "json" {
-        let _ = tracing_subscriber::fmt()
-            .json()
-            .with_max_level(log_level)
-            .try_init();
+        let _ = tracing_subscriber::fmt().json().with_max_level(log_level).try_init();
     } else {
-        let _ = tracing_subscriber::fmt()
-            .with_max_level(log_level)
-            .try_init();
+        let _ = tracing_subscriber::fmt().with_max_level(log_level).try_init();
     }
 }
 
@@ -165,9 +154,7 @@ fn create_statsd_client_with_prefix(prefix: &str) -> StatsdClient {
     let statsd_addr = format!("{}:8125", statsd_host);
 
     let socket = UdpSocket::bind("0.0.0.0:0").expect("failed to bind UDP socket");
-    socket
-        .set_nonblocking(true)
-        .expect("failed to set socket nonblocking");
+    socket.set_nonblocking(true).expect("failed to set socket nonblocking");
     let sink =
         UdpMetricSink::from(statsd_addr.as_str(), socket).expect("failed to create StatsD sink");
 

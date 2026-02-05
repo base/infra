@@ -2,8 +2,10 @@
 //!
 //! Ports wrapper strategies from `base/agent/service/service/strategy.go`.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
 
 use async_trait::async_trait;
 use tracing::info;
@@ -27,10 +29,7 @@ pub struct OnceHealthyAlwaysHealthy<C: HealthCheck> {
 impl<C: HealthCheck> OnceHealthyAlwaysHealthy<C> {
     pub fn new(inner: C) -> Self {
         info!(inner = inner.name(), "starting once-healthy-always-healthy wrapper");
-        Self {
-            inner,
-            previously_healthy: AtomicBool::new(false),
-        }
+        Self { inner, previously_healthy: AtomicBool::new(false) }
     }
 
     /// Check if the wrapper has latched to healthy.
@@ -85,9 +84,7 @@ pub struct SharedHealthCheck {
 
 impl SharedHealthCheck {
     pub fn new<C: HealthCheck + 'static>(check: C) -> Self {
-        Self {
-            inner: Arc::new(check),
-        }
+        Self { inner: Arc::new(check) }
     }
 
     pub fn from_arc(inner: Arc<dyn HealthCheck>) -> Self {
@@ -97,9 +94,7 @@ impl SharedHealthCheck {
 
 impl Clone for SharedHealthCheck {
     fn clone(&self) -> Self {
-        Self {
-            inner: Arc::clone(&self.inner),
-        }
+        Self { inner: Arc::clone(&self.inner) }
     }
 }
 
@@ -120,8 +115,9 @@ impl HealthCheck for SharedHealthCheck {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::sync::atomic::AtomicU8;
+
+    use super::*;
 
     /// A simple mock health check for testing
     struct MockHealthCheck {
@@ -131,10 +127,7 @@ mod tests {
 
     impl MockHealthCheck {
         fn new(name: &'static str) -> Self {
-            Self {
-                status: AtomicU8::new(HealthStatus::Unhealthy.code()),
-                name,
-            }
+            Self { status: AtomicU8::new(HealthStatus::Unhealthy.code()), name }
         }
 
         fn set_status(&self, status: HealthStatus) {

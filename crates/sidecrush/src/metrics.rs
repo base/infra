@@ -1,7 +1,6 @@
-use cadence::{Counted, Gauged, StatsdClient};
-use std::path::Path;
-use std::sync::Arc;
-use std::time::Duration;
+use std::{path::Path, sync::Arc, time::Duration};
+
+use cadence::{CountedExt, Gauged, StatsdClient};
 use tokio::time::interval;
 use tracing::{debug, info};
 
@@ -16,9 +15,7 @@ const METRIC_LATEST_BLOCK_NUMBER: &str = "latest_block_number";
 const READY_FILE: &str = "/app/assets/ready";
 
 /// Metrics client wrapper for block building health checks.
-/// Uses two clients to match metric naming conventions:
-/// - `client`: prefixed with "base.blocks" for health counters + latest_block_number
-/// - `volume_client`: no prefix for node_service.agent.* metrics (matches Go Health Service)
+/// Emits metrics every 2 seconds via status heartbeat (independent of poll frequency).
 #[derive(Clone, Debug)]
 pub struct HealthcheckMetrics {
     /// Prefixed client for base.blocks.* metrics
@@ -29,34 +26,27 @@ pub struct HealthcheckMetrics {
 
 impl HealthcheckMetrics {
     pub fn new(client: StatsdClient, volume_client: StatsdClient) -> Self {
-        Self {
-            client: Arc::new(client),
-            volume_client: Arc::new(volume_client),
-        }
+        Self { client: Arc::new(client), volume_client: Arc::new(volume_client) }
     }
 
-    /// Increment status_healthy counter (2s heartbeat)
-    /// Emits: base.blocks.healthy
+    /// Increment status_healthy counter (2s heartbeat).
     pub fn increment_status_healthy(&self) {
-        let _ = self.client.count("healthy", 1);
+        let _ = self.client.incr("healthy");
     }
 
-    /// Increment status_delayed counter (2s heartbeat)
-    /// Emits: base.blocks.delayed
+    /// Increment status_delayed counter (2s heartbeat).
     pub fn increment_status_delayed(&self) {
-        let _ = self.client.count("delayed", 1);
+        let _ = self.client.incr("delayed");
     }
 
-    /// Increment status_unhealthy counter (2s heartbeat)
-    /// Emits: base.blocks.unhealthy
+    /// Increment status_unhealthy counter (2s heartbeat).
     pub fn increment_status_unhealthy(&self) {
-        let _ = self.client.count("unhealthy", 1);
+        let _ = self.client.incr("unhealthy");
     }
 
-    /// Increment status_error counter (2s heartbeat)
-    /// Emits: base.blocks.error
+    /// Increment status_error counter (2s heartbeat).
     pub fn increment_status_error(&self) {
-        let _ = self.client.count("error", 1);
+        let _ = self.client.incr("error");
     }
 
     /// Emit volume free bytes gauge (no prefix, matches Go)
@@ -94,11 +84,7 @@ pub struct PlatformMetrics<C: EthClient> {
 
 impl<C: EthClient> PlatformMetrics<C> {
     pub fn new(metrics: HealthcheckMetrics, eth_client: C, data_dir: String) -> Self {
-        Self {
-            metrics,
-            eth_client,
-            data_dir,
-        }
+        Self { metrics, eth_client, data_dir }
     }
 
     /// Check if node is provisioned (ready file exists).
@@ -109,8 +95,7 @@ impl<C: EthClient> PlatformMetrics<C> {
     /// Collect and emit volume metrics (Linux-specific).
     #[cfg(target_os = "linux")]
     fn collect_volume_metrics(&self) {
-        use std::ffi::CString;
-        use std::mem::MaybeUninit;
+        use std::{ffi::CString, mem::MaybeUninit};
 
         let path = match CString::new(self.data_dir.as_str()) {
             Ok(p) => p,
@@ -184,12 +169,13 @@ impl<C: EthClient> PlatformMetrics<C> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::blockbuilding_healthcheck::HeaderSummary;
+    use std::{net::UdpSocket, sync::Mutex};
+
     use async_trait::async_trait;
     use cadence::UdpMetricSink;
-    use std::net::UdpSocket;
-    use std::sync::Mutex;
+
+    use super::*;
+    use crate::blockbuilding_healthcheck::HeaderSummary;
 
     struct MockClient {
         header: Mutex<HeaderSummary>,

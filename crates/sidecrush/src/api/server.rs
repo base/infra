@@ -9,17 +9,12 @@
 //! - `/debug/override/health` - Force healthy status
 //! - `/debug/override/health/reset` - Reset override
 
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
 use std::sync::{
-    atomic::{AtomicBool, AtomicU8, Ordering},
     Arc,
+    atomic::{AtomicBool, AtomicU8, Ordering},
 };
+
+use axum::{Router, extract::State, http::StatusCode, response::IntoResponse, routing::get};
 use tracing::debug;
 
 use crate::health::HealthStatus;
@@ -40,11 +35,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(health_status: Arc<AtomicU8>, startup_status: Arc<AtomicU8>) -> Self {
-        Self {
-            health_status,
-            startup_status,
-            force_healthy: Arc::new(AtomicBool::new(false)),
-        }
+        Self { health_status, startup_status, force_healthy: Arc::new(AtomicBool::new(false)) }
     }
 
     /// Create a simple AppState with fresh atomics (for testing or simple usage)
@@ -164,10 +155,10 @@ async fn override_reset(State(state): State<AppState>) -> impl IntoResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use axum::body::Body;
-    use axum::http::Request;
+    use axum::{body::Body, http::Request};
     use tower::util::ServiceExt;
+
+    use super::*;
 
     fn test_state() -> AppState {
         AppState::new_simple()
@@ -189,9 +180,7 @@ mod tests {
     #[tokio::test]
     async fn health_endpoint_returns_503_when_unhealthy() {
         let state = test_state();
-        state
-            .health_status
-            .store(HealthStatus::Unhealthy.code(), Ordering::Relaxed);
+        state.health_status.store(HealthStatus::Unhealthy.code(), Ordering::Relaxed);
         let app = create_router(state, false);
 
         let response = app
@@ -205,9 +194,7 @@ mod tests {
     #[tokio::test]
     async fn health_endpoint_returns_200_when_delayed() {
         let state = test_state();
-        state
-            .health_status
-            .store(HealthStatus::Delayed.code(), Ordering::Relaxed);
+        state.health_status.store(HealthStatus::Delayed.code(), Ordering::Relaxed);
         let app = create_router(state, false);
 
         let response = app
@@ -221,9 +208,7 @@ mod tests {
     #[tokio::test]
     async fn force_override_returns_200_regardless_of_status() {
         let state = test_state();
-        state
-            .health_status
-            .store(HealthStatus::Error.code(), Ordering::Relaxed);
+        state.health_status.store(HealthStatus::Error.code(), Ordering::Relaxed);
         // Manually set force_healthy (simulating what the debug endpoint would do)
         state.force_healthy.store(true, Ordering::Relaxed);
         let app = create_router(state, false);
@@ -240,21 +225,12 @@ mod tests {
     async fn startup_endpoint_independent_of_health() {
         let state = test_state();
         // Set main health to unhealthy but startup to healthy
-        state
-            .health_status
-            .store(HealthStatus::Unhealthy.code(), Ordering::Relaxed);
-        state
-            .startup_status
-            .store(HealthStatus::Healthy.code(), Ordering::Relaxed);
+        state.health_status.store(HealthStatus::Unhealthy.code(), Ordering::Relaxed);
+        state.startup_status.store(HealthStatus::Healthy.code(), Ordering::Relaxed);
         let app = create_router(state, false);
 
         let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/startup-health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/startup-health").body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -268,12 +244,7 @@ mod tests {
 
         // Debug endpoint should return 404 when disabled
         let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/debug/override/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/debug/override/health").body(Body::empty()).unwrap())
             .await
             .unwrap();
 
@@ -283,9 +254,7 @@ mod tests {
     #[tokio::test]
     async fn override_endpoints_work_when_enabled() {
         let state = test_state();
-        state
-            .health_status
-            .store(HealthStatus::Error.code(), Ordering::Relaxed);
+        state.health_status.store(HealthStatus::Error.code(), Ordering::Relaxed);
 
         // First check it's unhealthy
         let app = create_router(state.clone(), true);
@@ -298,12 +267,7 @@ mod tests {
         // Enable override via debug endpoint
         let app = create_router(state.clone(), true);
         let response = app
-            .oneshot(
-                Request::builder()
-                    .uri("/debug/override/health")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+            .oneshot(Request::builder().uri("/debug/override/health").body(Body::empty()).unwrap())
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::OK);
@@ -320,10 +284,7 @@ mod tests {
         let app = create_router(state.clone(), true);
         let response = app
             .oneshot(
-                Request::builder()
-                    .uri("/debug/override/health/reset")
-                    .body(Body::empty())
-                    .unwrap(),
+                Request::builder().uri("/debug/override/health/reset").body(Body::empty()).unwrap(),
             )
             .await
             .unwrap();

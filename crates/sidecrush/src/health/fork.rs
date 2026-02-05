@@ -8,8 +8,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use async_trait::async_trait;
 use tracing::{debug, error, info};
 
-use crate::blockbuilding_healthcheck::EthClient;
-use crate::health::{HealthCheck, HealthStatus};
+use crate::{
+    blockbuilding_healthcheck::EthClient,
+    health::{HealthCheck, HealthStatus},
+};
 
 /// Fork detection health check.
 ///
@@ -136,9 +138,10 @@ impl<L: EthClient + 'static, E: EthClient + 'static> HealthCheck for ForkCheck<L
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
     use crate::blockbuilding_healthcheck::HeaderSummary;
-    use std::sync::{Arc, Mutex};
 
     #[derive(Clone)]
     struct MockClient {
@@ -147,9 +150,7 @@ mod tests {
 
     impl MockClient {
         fn new(headers: Vec<HeaderSummary>) -> Self {
-            Self {
-                headers: Arc::new(Mutex::new(headers)),
-            }
+            Self { headers: Arc::new(Mutex::new(headers)) }
         }
     }
 
@@ -159,10 +160,7 @@ mod tests {
             &self,
         ) -> Result<HeaderSummary, Box<dyn std::error::Error + Send + Sync>> {
             let headers = self.headers.lock().unwrap();
-            headers
-                .last()
-                .cloned()
-                .ok_or_else(|| "no headers".into())
+            headers.last().cloned().ok_or_else(|| "no headers".into())
         }
 
         async fn header_by_number(
@@ -215,14 +213,8 @@ mod tests {
         let hash2_local = [2u8; 32];
         let hash2_external = [99u8; 32]; // Different hash at block 2
 
-        let local = MockClient::new(vec![
-            make_header(1, hash1),
-            make_header(2, hash2_local),
-        ]);
-        let external = MockClient::new(vec![
-            make_header(1, hash1),
-            make_header(2, hash2_external),
-        ]);
+        let local = MockClient::new(vec![make_header(1, hash1), make_header(2, hash2_local)]);
+        let external = MockClient::new(vec![make_header(1, hash1), make_header(2, hash2_external)]);
 
         let check = ForkCheck::new(local, external);
         check.check().await;
@@ -241,10 +233,7 @@ mod tests {
             make_header(2, hash2),
             make_header(3, hash3),
         ]);
-        let external = MockClient::new(vec![
-            make_header(1, hash1),
-            make_header(2, hash2),
-        ]);
+        let external = MockClient::new(vec![make_header(1, hash1), make_header(2, hash2)]);
 
         let check = ForkCheck::new(local, external);
         check.check().await;
@@ -259,10 +248,7 @@ mod tests {
         let hash3 = [3u8; 32];
 
         // Local is at block 2, external is at block 3
-        let local = MockClient::new(vec![
-            make_header(1, hash1),
-            make_header(2, hash2),
-        ]);
+        let local = MockClient::new(vec![make_header(1, hash1), make_header(2, hash2)]);
         let external = MockClient::new(vec![
             make_header(1, hash1),
             make_header(2, hash2),
