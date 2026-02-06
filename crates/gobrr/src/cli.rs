@@ -32,8 +32,8 @@ impl NetworkPreset {
     /// Returns the default RPC endpoint for this network preset
     pub fn default_rpc(&self) -> Option<&'static str> {
         match self {
-            Self::Sepolia => Some("https://sepolia.base.org"),
-            Self::SepoliaAlpha => Some("https://sepolia-alpha.base.org"),
+            Self::Sepolia => Some("https://base-sepolia.cbhq.net"),
+            Self::SepoliaAlpha => Some("https://base-sepolia-alpha.cbhq.net"),
             Self::Custom => None,
         }
     }

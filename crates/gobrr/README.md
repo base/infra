@@ -27,7 +27,7 @@ cargo build --release -p gobrr-bin
 | `--rpc` | - | Single RPC endpoint |
 | `--rpc-endpoints` | - | Comma-separated endpoints for load distribution |
 | `--endpoint-distribution` | `round-robin` | `round-robin`, `random`, or `weighted` |
-| `--network` | `custom` | `sepolia`, `sepolia-alpha`, or `custom` |
+| `--network` | `custom` | `sepolia` (base-sepolia.cbhq.net), `sepolia-alpha` (base-sepolia-alpha.cbhq.net), or `custom` |
 | `--mnemonic` | - | HD wallet mnemonic for sender accounts |
 | `--funder-key` | - | Private key with ETH to fund senders |
 | `--funding-amount` | - | Wei to fund each sender |
