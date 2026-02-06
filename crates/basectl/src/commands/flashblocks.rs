@@ -1,5 +1,4 @@
-use std::collections::VecDeque;
-use std::io::Stdout;
+use std::{collections::VecDeque, io::Stdout};
 
 use anyhow::Result;
 use base_flashtypes::Flashblock;
@@ -11,12 +10,14 @@ use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Row, Table, TableState},
 };
-
-use crate::config::ChainConfig;
-use crate::rpc::{fetch_chain_params, ChainParams};
-use crate::tui::{restore_terminal, setup_terminal, AppFrame, Keybinding, NavResult};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
+
+use crate::{
+    config::ChainConfig,
+    rpc::{ChainParams, fetch_chain_params},
+    tui::{AppFrame, Keybinding, NavResult, restore_terminal, setup_terminal},
+};
 
 const MAX_FLASHBLOCKS: usize = 10_000;
 
@@ -67,7 +68,8 @@ pub async fn default_subscribe(config: &ChainConfig) -> Result<NavResult> {
             return Err(e);
         }
     };
-    let result = run_tui_loop(&mut terminal, config.flashblocks_ws.as_str(), &config.name, params).await;
+    let result =
+        run_tui_loop(&mut terminal, config.flashblocks_ws.as_str(), &config.name, params).await;
     restore_terminal(&mut terminal)?;
     result
 }
@@ -120,9 +122,8 @@ impl AppState {
         let now = Local::now();
 
         // Extract base fee from base payload (present in FB#0)
-        let base_fee = fb.base.as_ref().map(|base| {
-            base.base_fee_per_gas.try_into().unwrap_or(u128::MAX)
-        });
+        let base_fee =
+            fb.base.as_ref().map(|base| base.base_fee_per_gas.try_into().unwrap_or(u128::MAX));
 
         // Capture previous base fee before updating
         let prev_base_fee = self.current_base_fee;
@@ -134,9 +135,8 @@ impl AppState {
         }
 
         // Calculate time diff from previous flashblock
-        let time_diff_ms = self.flashblocks.front().map(|prev| {
-            (now - prev.timestamp).num_milliseconds()
-        });
+        let time_diff_ms =
+            self.flashblocks.front().map(|prev| (now - prev.timestamp).num_milliseconds());
 
         let entry = FlashblockEntry {
             block_number,
@@ -222,10 +222,7 @@ impl AppState {
 }
 
 async fn run_subscribe(args: SubscribeArgs, config: &ChainConfig) -> Result<()> {
-    let ws_url = args
-        .websocket
-        .as_deref()
-        .unwrap_or(config.flashblocks_ws.as_str());
+    let ws_url = args.websocket.as_deref().unwrap_or(config.flashblocks_ws.as_str());
 
     if args.json {
         run_json_mode(ws_url).await
@@ -355,9 +352,13 @@ const BAR_UNITS: usize = BAR_CHARS * 8;
 const EIGHTH_BLOCKS: [char; 8] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
 
 fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
-    let header_cells = ["Block", "FB#", "Txns", "Gas Used", "Base Fee", "Delta", "Gas Fill", "Time"]
-        .iter()
-        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
+    let header_cells =
+        ["Block", "FB#", "Txns", "Gas Used", "Base Fee", "Delta", "Gas Fill", "Time"].iter().map(
+            |h| {
+                Cell::from(*h)
+                    .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            },
+        );
     let header = Row::new(header_cells).height(1);
 
     let rows = state.flashblocks.iter().map(|fb| {
@@ -378,18 +379,12 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
 
         // Base fee only shown on FB#0, colored based on change direction
         let base_fee_cell = if fb.index == 0 {
-            let base_fee_str = fb.base_fee
-                .map(format_gwei)
-                .unwrap_or_else(|| "-".to_string());
+            let base_fee_str = fb.base_fee.map(format_gwei).unwrap_or_else(|| "-".to_string());
 
             // Determine color based on change: green if up, red if down
             let style = match (fb.base_fee, fb.prev_base_fee) {
-                (Some(current), Some(prev)) if current > prev => {
-                    Style::default().fg(Color::Green)
-                }
-                (Some(current), Some(prev)) if current < prev => {
-                    Style::default().fg(Color::Red)
-                }
+                (Some(current), Some(prev)) if current > prev => Style::default().fg(Color::Green),
+                (Some(current), Some(prev)) if current < prev => Style::default().fg(Color::Red),
                 _ => Style::default(),
             };
             Cell::from(base_fee_str).style(style)
@@ -447,7 +442,7 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::DarkGray))
-                .title(title)
+                .title(title),
         )
         .row_highlight_style(Style::default().bg(Color::Rgb(40, 40, 50)));
 
@@ -469,8 +464,8 @@ fn build_gas_bar(gas_used: u64, gas_limit: u64, elasticity_multiplier: u64) -> L
     let filled_units = ((gas_used as f64 / limit as f64) * BAR_UNITS as f64).round() as usize;
     let filled_units = filled_units.min(BAR_UNITS);
 
-    let fill_color = Color::Rgb(100, 180, 255);    // Nice blue
-    let target_color = Color::Rgb(255, 200, 100);  // Orange/yellow for target marker
+    let fill_color = Color::Rgb(100, 180, 255); // Nice blue
+    let target_color = Color::Rgb(255, 200, 100); // Orange/yellow for target marker
 
     let mut spans = Vec::new();
 
@@ -522,9 +517,5 @@ fn format_gas(gas: u64) -> String {
 
 fn format_gwei(wei: u128) -> String {
     let gwei = wei as f64 / 1_000_000_000.0;
-    if gwei >= 1.0 {
-        format!("{gwei:.2} gwei")
-    } else {
-        format!("{gwei:.4} gwei")
-    }
+    if gwei >= 1.0 { format!("{gwei:.2} gwei") } else { format!("{gwei:.4} gwei") }
 }

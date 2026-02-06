@@ -34,16 +34,8 @@ const MENU_ITEMS: &[MenuItem] = &[
         label: "Config",
         description: "View chain configuration and L1 SystemConfig",
     },
-    MenuItem {
-        key: 'f',
-        label: "Flashblocks",
-        description: "Subscribe to flashblocks stream",
-    },
-    MenuItem {
-        key: 'q',
-        label: "Quit",
-        description: "Exit basectl",
-    },
+    MenuItem { key: 'f', label: "Flashblocks", description: "Subscribe to flashblocks stream" },
+    MenuItem { key: 'q', label: "Quit", description: "Exit basectl" },
 ];
 
 /// Selected command from homescreen
@@ -69,33 +61,34 @@ fn run_homescreen_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Res
         terminal.draw(|f| draw_homescreen(f, selected_index))?;
 
         if let Event::Key(key) = event::read()?
-            && key.kind == KeyEventKind::Press {
-                // Handle Ctrl+C to exit
-                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-                    return Ok(HomeSelection::Quit);
-                }
-                match key.code {
-                    KeyCode::Char('q') => return Ok(HomeSelection::Quit),
-                    KeyCode::Char('c') => return Ok(HomeSelection::Config),
-                    KeyCode::Char('f') => return Ok(HomeSelection::Flashblocks),
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        selected_index = selected_index.saturating_sub(1);
-                    }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        if selected_index < MENU_ITEMS.len() - 1 {
-                            selected_index += 1;
-                        }
-                    }
-                    KeyCode::Enter => {
-                        return Ok(match selected_index {
-                            0 => HomeSelection::Config,
-                            1 => HomeSelection::Flashblocks,
-                            _ => HomeSelection::Quit,
-                        });
-                    }
-                    _ => {}
-                }
+            && key.kind == KeyEventKind::Press
+        {
+            // Handle Ctrl+C to exit
+            if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                return Ok(HomeSelection::Quit);
             }
+            match key.code {
+                KeyCode::Char('q') => return Ok(HomeSelection::Quit),
+                KeyCode::Char('c') => return Ok(HomeSelection::Config),
+                KeyCode::Char('f') => return Ok(HomeSelection::Flashblocks),
+                KeyCode::Up | KeyCode::Char('k') => {
+                    selected_index = selected_index.saturating_sub(1);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if selected_index < MENU_ITEMS.len() - 1 {
+                        selected_index += 1;
+                    }
+                }
+                KeyCode::Enter => {
+                    return Ok(match selected_index {
+                        0 => HomeSelection::Config,
+                        1 => HomeSelection::Flashblocks,
+                        _ => HomeSelection::Quit,
+                    });
+                }
+                _ => {}
+            }
+        }
     }
 }
 
@@ -157,15 +150,11 @@ fn draw_menu(f: &mut Frame, area: Rect, selected_index: usize) {
         let is_selected = i == selected_index;
 
         // Key indicator
-        let key_style = Style::default()
-            .fg(base_blue)
-            .add_modifier(Modifier::BOLD);
+        let key_style = Style::default().fg(base_blue).add_modifier(Modifier::BOLD);
 
         // Label style
         let label_style = if is_selected {
-            Style::default()
-                .fg(Color::White)
-                .add_modifier(Modifier::BOLD)
+            Style::default().fg(Color::White).add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::Gray)
         };
@@ -196,12 +185,8 @@ fn draw_menu(f: &mut Frame, area: Rect, selected_index: usize) {
     let menu_width = 60u16.min(area.width);
     let horizontal_padding = area.width.saturating_sub(menu_width) / 2;
 
-    let centered_area = Rect {
-        x: area.x + horizontal_padding,
-        y: area.y,
-        width: menu_width,
-        height: area.height,
-    };
+    let centered_area =
+        Rect { x: area.x + horizontal_padding, y: area.y, width: menu_width, height: area.height };
 
     let menu = Paragraph::new(lines).alignment(Alignment::Left);
 

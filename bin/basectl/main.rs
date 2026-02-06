@@ -1,9 +1,12 @@
+use basectl_cli::{
+    commands::{
+        config::{ConfigCommand, default_view, run_config},
+        flashblocks::{FlashblocksCommand, default_subscribe, run_flashblocks},
+    },
+    config::ChainConfig,
+    tui::{HomeSelection, NavResult, run_homescreen},
+};
 use clap::{Parser, Subcommand};
-
-use basectl_cli::commands::config::{ConfigCommand, run_config, default_view};
-use basectl_cli::commands::flashblocks::{FlashblocksCommand, run_flashblocks, default_subscribe};
-use basectl_cli::config::ChainConfig;
-use basectl_cli::tui::{run_homescreen, HomeSelection, NavResult};
 
 #[derive(Debug, Parser)]
 #[command(name = "basectl")]

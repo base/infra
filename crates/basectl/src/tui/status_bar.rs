@@ -1,8 +1,4 @@
-use ratatui::{
-    layout::Rect,
-    prelude::*,
-    widgets::Paragraph,
-};
+use ratatui::{layout::Rect, prelude::*, widgets::Paragraph};
 
 /// Optional status info to display in the center of the status bar.
 #[derive(Debug, Clone, Default)]
@@ -13,10 +9,7 @@ pub struct StatusInfo {
 
 impl StatusInfo {
     pub fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            style: Style::default().fg(Color::DarkGray),
-        }
+        Self { message: message.into(), style: Style::default().fg(Color::DarkGray) }
     }
 
     pub const fn with_style(mut self, style: Style) -> Self {

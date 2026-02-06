@@ -22,9 +22,7 @@ impl ChainConfig {
             rpc: Url::parse("https://mainnet.base.org").unwrap(),
             flashblocks_ws: Url::parse("wss://mainnet.flashblocks.base.org/ws").unwrap(),
             l1_rpc: Url::parse("https://ethereum-rpc.publicnode.com").unwrap(),
-            system_config: "0x73a79Fab69143498Ed3712e519A88a918e1f4072"
-                .parse()
-                .unwrap(),
+            system_config: "0x73a79Fab69143498Ed3712e519A88a918e1f4072".parse().unwrap(),
         }
     }
 
@@ -35,9 +33,7 @@ impl ChainConfig {
             rpc: Url::parse("https://sepolia.base.org").unwrap(),
             flashblocks_ws: Url::parse("wss://sepolia.flashblocks.base.org/ws").unwrap(),
             l1_rpc: Url::parse("https://ethereum-sepolia-rpc.publicnode.com").unwrap(),
-            system_config: "0xf272670eb55e895584501d564AfEB048bEd26194"
-                .parse()
-                .unwrap(),
+            system_config: "0xf272670eb55e895584501d564AfEB048bEd26194".parse().unwrap(),
         }
     }
 

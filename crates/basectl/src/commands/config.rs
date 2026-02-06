@@ -1,22 +1,24 @@
-use std::io::Stdout;
-use std::time::{Duration, Instant};
+use std::{
+    io::Stdout,
+    time::{Duration, Instant},
+};
 
-use alloy_primitives::{hex, Address};
+use alloy_primitives::{Address, hex};
 use anyhow::Result;
 use clap::Subcommand;
 use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
-use tokio::time::interval;
 use ratatui::{
     layout::{Constraint, Rect},
     prelude::*,
     widgets::{Block, Borders, Cell, Row, Table},
 };
+use tokio::time::interval;
 
 use crate::{
     config::ChainConfig,
-    l1_client::{fetch_full_system_config, FullSystemConfig},
-    tui::{restore_terminal, setup_terminal, AppFrame, Keybinding, NavResult, StatusInfo},
+    l1_client::{FullSystemConfig, fetch_full_system_config},
+    tui::{AppFrame, Keybinding, NavResult, StatusInfo, restore_terminal, setup_terminal},
 };
 
 const REFRESH_INTERVAL: Duration = Duration::from_secs(12);
@@ -73,9 +75,7 @@ impl ConfigViewState {
     }
 
     fn seconds_until_refresh(&self) -> u64 {
-        REFRESH_INTERVAL
-            .saturating_sub(self.last_fetch.elapsed())
-            .as_secs()
+        REFRESH_INTERVAL.saturating_sub(self.last_fetch.elapsed()).as_secs()
     }
 
     fn should_refresh(&self) -> bool {
@@ -162,21 +162,15 @@ fn draw_config_view(f: &mut Frame, state: &ConfigViewState) {
     let status_info = build_status_info(state);
 
     // Render the app frame (status bar + help sidebar)
-    AppFrame::render(
-        f,
-        &layout,
-        &state.chain_config.name,
-        KEYBINDINGS,
-        Some(&status_info),
-    );
+    AppFrame::render(f, &layout, &state.chain_config.name, KEYBINDINGS, Some(&status_info));
 
     // Split content area for chain config and system config tables
     let content_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(8),  // Chain config table
-            Constraint::Length(1),  // Spacing
-            Constraint::Min(14),    // System config table
+            Constraint::Length(8), // Chain config table
+            Constraint::Length(1), // Spacing
+            Constraint::Min(14),   // System config table
         ])
         .split(layout.content);
 
@@ -211,11 +205,7 @@ fn draw_chain_config_table(f: &mut Frame, area: Rect, config: &ChainConfig) {
         ]),
     ];
 
-    let table = Table::new(
-        rows,
-        [Constraint::Length(16), Constraint::Min(40)],
-    )
-    .block(
+    let table = Table::new(rows, [Constraint::Length(16), Constraint::Min(40)]).block(
         Block::default()
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::DarkGray))
@@ -239,28 +229,42 @@ fn draw_system_config_table(f: &mut Frame, area: Rect, state: &ConfigViewState) 
 
     let rows = vec![
         make_row("Gas Limit", format_gas_limit(cur.gas_limit), changed!(gas_limit)),
-        make_row("EIP-1559 Elasticity", format_option(cur.eip1559_elasticity), changed!(eip1559_elasticity)),
-        make_row("EIP-1559 Denominator", format_option(cur.eip1559_denominator), changed!(eip1559_denominator)),
+        make_row(
+            "EIP-1559 Elasticity",
+            format_option(cur.eip1559_elasticity),
+            changed!(eip1559_elasticity),
+        ),
+        make_row(
+            "EIP-1559 Denominator",
+            format_option(cur.eip1559_denominator),
+            changed!(eip1559_denominator),
+        ),
         make_row("Batcher Hash", format_batcher_hash(cur.batcher_hash), changed!(batcher_hash)),
         make_row("Overhead", format_option(cur.overhead), changed!(overhead)),
         make_row("Scalar", format_option(cur.scalar), changed!(scalar)),
-        make_row("Unsafe Block Signer", format_address(cur.unsafe_block_signer), changed!(unsafe_block_signer)),
+        make_row(
+            "Unsafe Block Signer",
+            format_address(cur.unsafe_block_signer),
+            changed!(unsafe_block_signer),
+        ),
         make_row("Start Block", format_option(cur.start_block), changed!(start_block)),
         make_row("Basefee Scalar", format_option(cur.basefee_scalar), changed!(basefee_scalar)),
-        make_row("Blobbasefee Scalar", format_option(cur.blobbasefee_scalar), changed!(blobbasefee_scalar)),
+        make_row(
+            "Blobbasefee Scalar",
+            format_option(cur.blobbasefee_scalar),
+            changed!(blobbasefee_scalar),
+        ),
     ];
 
-    let table = Table::new(
-        rows,
-        [Constraint::Length(20), Constraint::Min(40), Constraint::Length(10)],
-    )
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(Color::DarkGray))
-            .title(" L1 SystemConfig (auto-refresh) ")
-            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-    );
+    let table =
+        Table::new(rows, [Constraint::Length(20), Constraint::Min(40), Constraint::Length(10)])
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::DarkGray))
+                    .title(" L1 SystemConfig (auto-refresh) ")
+                    .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+            );
 
     f.render_widget(table, area);
 }
