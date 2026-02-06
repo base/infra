@@ -182,7 +182,7 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
         Line::from(vec![
             Span::styled("Last batch: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                time_since.map(format_duration).unwrap_or_else(|| "-".to_string()),
+                time_since.map_or_else(|| "-".to_string(), format_duration),
                 Style::default().fg(Color::White),
             ),
         ]),

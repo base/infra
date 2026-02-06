@@ -185,8 +185,7 @@ impl View for FlashblocksView {
                 };
 
                 let (base_fee_str, base_fee_style) = if entry.index == 0 {
-                    let fee_str =
-                        entry.base_fee.map(format_gwei).unwrap_or_else(|| "-".to_string());
+                    let fee_str = entry.base_fee.map_or_else(|| "-".to_string(), format_gwei);
                     let style = match (entry.base_fee, entry.prev_base_fee) {
                         (Some(curr), Some(prev)) if curr > prev => Style::default().fg(Color::Red),
                         (Some(curr), Some(prev)) if curr < prev => {

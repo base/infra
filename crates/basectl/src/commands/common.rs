@@ -44,10 +44,6 @@ const BLOCK_COLORS: [Color; 24] = [
 
 const EIGHTH_BLOCKS: [char; 8] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
 
-// =============================================================================
-// Color Constants
-// =============================================================================
-
 // Primary colors
 pub const COLOR_BASE_BLUE: Color = Color::Rgb(0, 82, 255);
 pub const COLOR_ACTIVE_BORDER: Color = Color::Rgb(100, 180, 255);
@@ -62,18 +58,10 @@ pub const COLOR_BURN: Color = Color::Rgb(100, 200, 100);
 pub const COLOR_TARGET: Color = Color::Rgb(255, 200, 100);
 pub const COLOR_GAS_FILL: Color = Color::Rgb(100, 180, 255);
 
-// =============================================================================
-// Duration Constants
-// =============================================================================
-
 pub const EVENT_POLL_TIMEOUT: Duration = Duration::from_millis(100);
 pub const RATE_WINDOW_30S: Duration = Duration::from_secs(30);
 pub const RATE_WINDOW_2M: Duration = Duration::from_secs(120);
 pub const RATE_WINDOW_5M: Duration = Duration::from_secs(300);
-
-// =============================================================================
-// Shared Data Types
-// =============================================================================
 
 #[derive(Clone, Debug)]
 pub struct FlashblockEntry {
@@ -81,6 +69,10 @@ pub struct FlashblockEntry {
     pub index: u64,
     pub tx_count: usize,
     pub gas_used: u64,
+    /// Cumulative tx count for this block (sum of all flash indices so far)
+    pub cumulative_tx_count: usize,
+    /// Cumulative gas used for this block (sum of all flash indices so far)
+    pub cumulative_gas_used: u64,
     pub gas_limit: u64,
     pub base_fee: Option<u128>,
     pub prev_base_fee: Option<u128>,
@@ -144,11 +136,11 @@ impl BatchSubmission {
     }
 
     pub fn l1_block_display(&self) -> String {
-        self.l1_block_number.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string())
+        self.l1_block_number.map_or_else(|| "-".to_string(), |n| n.to_string())
     }
 
     pub fn compression_display(&self) -> String {
-        self.compression_ratio().map(|r| format!("{r:.2}x")).unwrap_or_else(|| "-".to_string())
+        self.compression_ratio().map_or_else(|| "-".to_string(), |r| format!("{r:.2}x"))
     }
 }
 
@@ -197,10 +189,6 @@ pub struct LoadingState {
     pub current_block: u64,
     pub total_blocks: u64,
 }
-
-// =============================================================================
-// DA Tracker - Shared State Management for DA Monitoring
-// =============================================================================
 
 #[derive(Debug)]
 pub struct DaTracker {
@@ -317,10 +305,6 @@ impl DaTracker {
         }
     }
 }
-
-// =============================================================================
-// Formatting Functions
-// =============================================================================
 
 pub fn format_bytes(bytes: u64) -> String {
     if bytes >= 1_000_000_000 {

@@ -27,3 +27,5 @@ alloy-primitives = { workspace = true }
 alloy-sol-types = { workspace = true }
 alloy-contract = { workspace = true }
 arboard = { workspace = true }
+gobrr = { workspace = true }
+tracing = { workspace = true }

@@ -40,6 +40,7 @@ pub async fn fetch_sync_status(op_node_rpc: &str) -> Result<SyncStatus> {
 
 pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) -> Result<()> {
     let (ws_stream, _) = connect_async(&url).await?;
+    tracing::info!(url = %url, "Connected to flashblocks websocket");
     let (_, mut read) = ws_stream.split();
 
     while let Some(msg) = read.next().await {
@@ -66,6 +67,7 @@ pub async fn run_flashblock_ws_timestamped(
     tx: mpsc::Sender<TimestampedFlashblock>,
 ) -> Result<()> {
     let (ws_stream, _) = connect_async(&url).await?;
+    tracing::info!(url = %url, "Connected to flashblocks websocket (timestamped)");
     let (_, mut read) = ws_stream.split();
 
     while let Some(msg) = read.next().await {
@@ -128,14 +130,13 @@ pub async fn fetch_initial_backlog(l2_rpc: &str, op_node_rpc: &str) -> Result<In
                     .await
                     .ok()
                     .flatten()
-                    .map(|block| {
+                    .map_or(0, |block| {
                         block
                             .transactions
                             .txns()
                             .map(|tx| tx.inner.input().len() as u64)
                             .sum::<u64>()
                     })
-                    .unwrap_or(0)
             }
         })
         .buffer_unordered(CONCURRENT_BLOCK_FETCHES)
@@ -177,14 +178,13 @@ pub async fn fetch_initial_backlog_with_progress(
                             .await
                             .ok()
                             .flatten()
-                            .map(|block| {
+                            .map_or(0, |block| {
                                 block
                                     .transactions
                                     .txns()
                                     .map(|tx| tx.inner.input().len() as u64)
                                     .sum::<u64>()
                             })
-                            .unwrap_or(0)
                     }
                 })
                 .buffer_unordered(CONCURRENT_BLOCK_FETCHES)
@@ -236,9 +236,8 @@ pub async fn run_block_fetcher(
     mut request_rx: mpsc::Receiver<u64>,
     result_tx: mpsc::Sender<BlockDaInfo>,
 ) {
-    let provider = match ProviderBuilder::new().connect(&l2_rpc).await {
-        Ok(p) => p,
-        Err(_) => return,
+    let Ok(provider) = ProviderBuilder::new().connect(&l2_rpc).await else {
+        return;
     };
 
     while let Some(block_num) = request_rx.recv().await {
@@ -324,9 +323,8 @@ pub async fn run_l1_batcher_watcher(
     batcher_address: Address,
     result_tx: mpsc::Sender<BlobSubmission>,
 ) {
-    let provider = match ProviderBuilder::new().connect(&l1_rpc).await {
-        Ok(p) => p,
-        Err(_) => return,
+    let Ok(provider) = ProviderBuilder::new().connect(&l1_rpc).await else {
+        return;
     };
 
     let mut last_block: Option<u64> = None;
@@ -335,12 +333,11 @@ pub async fn run_l1_batcher_watcher(
     loop {
         interval.tick().await;
 
-        let latest = match provider.get_block_number().await {
-            Ok(n) => n,
-            Err(_) => continue,
+        let Ok(latest) = provider.get_block_number().await else {
+            continue;
         };
 
-        let start_block = last_block.map(|b| b + 1).unwrap_or_else(|| latest.saturating_sub(5));
+        let start_block = last_block.map_or_else(|| latest.saturating_sub(5), |b| b + 1);
 
         for block_num in start_block..=latest {
             if let Ok(Some(block)) =

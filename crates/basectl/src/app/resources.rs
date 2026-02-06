@@ -19,6 +19,7 @@ pub struct Resources {
     pub flash: FlashState,
     pub system_config: Option<FullSystemConfig>,
     sys_config_rx: Option<mpsc::Receiver<FullSystemConfig>>,
+    pub loadtest: Option<gobrr::LoadTestState>,
 }
 
 #[derive(Debug)]
@@ -55,6 +56,7 @@ impl Resources {
             flash: FlashState::new(),
             system_config: None,
             sys_config_rx: None,
+            loadtest: None,
         }
     }
 
@@ -271,11 +273,30 @@ impl FlashState {
         let time_diff_ms =
             self.entries.front().map(|prev| (received_at - prev.timestamp).num_milliseconds());
 
+        let tx_count = fb.diff.transactions.len();
+        let gas_used = fb.diff.gas_used;
+
+        // Compute cumulative values by finding previous entry for same block
+        let (cumulative_tx_count, cumulative_gas_used) = if fb.index == 0 {
+            // First flash of this block, cumulative = diff
+            (tx_count, gas_used)
+        } else {
+            // Find the most recent entry for the same block to get its cumulative values
+            self.entries
+                .iter()
+                .find(|e| e.block_number == fb.metadata.block_number)
+                .map_or((tx_count, gas_used), |prev| {
+                    (prev.cumulative_tx_count + tx_count, prev.cumulative_gas_used + gas_used)
+                })
+        };
+
         let entry = FlashblockEntry {
             block_number: fb.metadata.block_number,
             index: fb.index,
-            tx_count: fb.diff.transactions.len(),
-            gas_used: fb.diff.gas_used,
+            tx_count,
+            gas_used,
+            cumulative_tx_count,
+            cumulative_gas_used,
             gas_limit: self.current_gas_limit,
             base_fee,
             prev_base_fee,

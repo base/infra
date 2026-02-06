@@ -11,6 +11,9 @@ license = "MIT"
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"
+rust-2018-idioms = "warn"
+elided-lifetimes-in-paths = "allow"
+trivial-casts = "warn"
 unreachable-pub = "warn"
 unused-must-use = "deny"
 unnameable-types = "warn"
@@ -42,6 +45,12 @@ explicit-iter-loop = "warn"
 iter-with-drain = "warn"
 needless-pass-by-ref-mut = "warn"
 string-lit-as-bytes = "warn"
+needless-continue = "warn"
+semicolon-if-nothing-returned = "warn"
+manual-let-else = "warn"
+map-unwrap-or = "warn"
+inefficient-to-string = "warn"
+checked-conversions = "warn"
 
 [workspace.dependencies]
 clap = { version = "4.0", features = ["derive", "env"] }
@@ -83,12 +92,21 @@ alloy-rpc-client = { version = "1.5.2" }
 alloy-transport-http = { version = "1.5.2" }
 alloy-sol-types = { version = "1.5.2" }
 alloy-contract = { version = "1.5.2" }
+alloy-signer = { version = "1.5.2" }
+alloy-signer-local = { version = "1.5.2", features = ["mnemonic"] }
+alloy-network = { version = "1.5.2" }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "hickory-dns"] }
+rand = "0.8"
+humantime = "2.1"
 
 # op-alloy
 op-alloy-rpc-types = { version = "0.22.0", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.22.0", default-features = false }
 op-alloy-consensus = { version = "0.22.0", default-features = false }
+op-alloy-network = { version = "0.22.0" }
+
 
 # base
-base-flashtypes = { git = "https://github.com/base/base.git" }
+base-flashtypes = { git = "https://github.com/base/base.git", rev = "720f6e1a" }
 basectl-cli = { path = "crates/basectl" }
+gobrr = { path = "crates/gobrr" }

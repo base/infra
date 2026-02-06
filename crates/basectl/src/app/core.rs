@@ -46,6 +46,9 @@ impl App {
             self.resources.da.poll();
             self.resources.flash.poll();
             self.resources.poll_sys_config();
+            if let Some(ref mut lt) = self.resources.loadtest {
+                lt.poll();
+            }
 
             let action = current_view.tick(&mut self.resources);
             if self.handle_action(action, &mut current_view, view_factory) {
@@ -76,13 +79,10 @@ impl App {
                         Action::None
                     }
                     KeyCode::Char('q') => Action::Quit,
-                    KeyCode::Esc => {
-                        if self.router.current() == ViewId::Home {
-                            Action::Quit
-                        } else {
-                            Action::SwitchView(ViewId::Home)
-                        }
-                    }
+                    KeyCode::Esc => match self.router.current() {
+                        ViewId::Home | ViewId::LoadTest => Action::Quit,
+                        _ => Action::SwitchView(ViewId::Home),
+                    },
                     _ => current_view.handle_key(key, &mut self.resources),
                 };
 

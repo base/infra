@@ -1,4 +1,6 @@
-use super::{CommandCenterView, ConfigView, DaMonitorView, FlashblocksView, HomeView};
+use super::{
+    CommandCenterView, ConfigView, DaMonitorView, FlashblocksView, HomeView, LoadTestView,
+};
 use crate::app::{View, ViewId};
 
 pub fn create_view(view_id: ViewId) -> Box<dyn View> {
@@ -8,5 +10,6 @@ pub fn create_view(view_id: ViewId) -> Box<dyn View> {
         ViewId::DaMonitor => Box::new(DaMonitorView::new()),
         ViewId::Flashblocks => Box::new(FlashblocksView::new()),
         ViewId::Config => Box::new(ConfigView::new()),
+        ViewId::LoadTest => Box::new(LoadTestView::new()),
     }
 }
