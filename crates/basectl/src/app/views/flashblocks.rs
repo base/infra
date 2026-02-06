@@ -113,9 +113,10 @@ impl View for FlashblocksView {
             KeyCode::Char('y') => {
                 if let Some(idx) = self.table_state.selected()
                     && let Some(entry) = resources.flash.entries.get(idx)
-                        && let Ok(mut clipboard) = Clipboard::new() {
-                            let _ = clipboard.set_text(entry.block_number.to_string());
-                        }
+                    && let Ok(mut clipboard) = Clipboard::new()
+                {
+                    let _ = clipboard.set_text(entry.block_number.to_string());
+                }
                 Action::None
             }
             _ => Action::None,
@@ -221,10 +222,10 @@ impl View for FlashblocksView {
                     GAS_BAR_CHARS,
                 );
 
-                let (time_diff_str, time_style) = match entry.time_diff_ms {
-                    Some(ms) => (format!("+{ms}ms"), Style::default().fg(time_diff_color(ms))),
-                    None => ("-".to_string(), Style::default().fg(Color::DarkGray)),
-                };
+                let (time_diff_str, time_style) = entry.time_diff_ms.map_or_else(
+                    || ("-".to_string(), Style::default().fg(Color::DarkGray)),
+                    |ms| (format!("+{ms}ms"), Style::default().fg(time_diff_color(ms))),
+                );
 
                 let first_fb_style = if entry.index == 0 {
                     Style::default().fg(Color::Green)

@@ -104,6 +104,7 @@ fn render_chain_config(f: &mut Frame, area: Rect, resources: &Resources) {
     f.render_widget(para, area);
 }
 
+#[allow(clippy::option_if_let_else)]
 fn render_system_config(f: &mut Frame, area: Rect, resources: &Resources) {
     let block = Block::default()
         .title(" L1 SystemConfig ")

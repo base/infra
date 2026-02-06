@@ -68,9 +68,10 @@ impl Resources {
 
     pub fn poll_sys_config(&mut self) {
         if let Some(ref mut rx) = self.sys_config_rx
-            && let Ok(cfg) = rx.try_recv() {
-                self.system_config = Some(cfg);
-            }
+            && let Ok(cfg) = rx.try_recv()
+        {
+            self.system_config = Some(cfg);
+        }
     }
 }
 

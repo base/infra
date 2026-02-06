@@ -96,16 +96,9 @@ impl View for HomeView {
                 }
                 Action::None
             }
-            KeyCode::Enter => {
-                if let Some(item) = MENU_ITEMS.get(self.selected_index) {
-                    match item.view_id {
-                        Some(view_id) => Action::SwitchView(view_id),
-                        None => Action::Quit,
-                    }
-                } else {
-                    Action::None
-                }
-            }
+            KeyCode::Enter => MENU_ITEMS
+                .get(self.selected_index)
+                .map_or(Action::None, |item| item.view_id.map_or(Action::Quit, Action::SwitchView)),
             _ => Action::None,
         }
     }

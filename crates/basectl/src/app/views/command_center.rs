@@ -195,9 +195,10 @@ impl View for CommandCenterView {
             }
             KeyCode::Char('y') => {
                 if let Some(block_num) = self.get_copyable_block(resources)
-                    && let Ok(mut clipboard) = Clipboard::new() {
-                        let _ = clipboard.set_text(block_num);
-                    }
+                    && let Ok(mut clipboard) = Clipboard::new()
+                {
+                    let _ = clipboard.set_text(block_num);
+                }
                 Action::None
             }
             _ => Action::None,
@@ -280,6 +281,7 @@ impl View for CommandCenterView {
     }
 }
 
+#[allow(clippy::option_if_let_else)]
 fn render_config_panel(f: &mut Frame, area: Rect, resources: &Resources) {
     let block = Block::default()
         .title(" L1 Config ")
@@ -531,10 +533,10 @@ fn render_flash_panel(
             let gas_bar =
                 build_gas_bar(entry.gas_used, entry.gas_limit, DEFAULT_ELASTICITY, GAS_BAR_CHARS);
 
-            let (time_diff_str, time_style) = match entry.time_diff_ms {
-                Some(ms) => (format!("+{ms}ms"), Style::default().fg(time_diff_color(ms))),
-                None => ("-".to_string(), Style::default().fg(Color::DarkGray)),
-            };
+            let (time_diff_str, time_style) = entry.time_diff_ms.map_or_else(
+                || ("-".to_string(), Style::default().fg(Color::DarkGray)),
+                |ms| (format!("+{ms}ms"), Style::default().fg(time_diff_color(ms))),
+            );
 
             let first_fb_style = if entry.index == 0 {
                 Style::default().fg(Color::Green)

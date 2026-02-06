@@ -65,33 +65,32 @@ impl App {
             })?;
 
             if event::poll(EVENT_POLL_TIMEOUT)?
-                && let Event::Key(key) = event::read()? {
-                    if key.code == KeyCode::Char('c')
-                        && key.modifiers.contains(KeyModifiers::CONTROL)
-                    {
-                        break;
-                    }
-
-                    let action = match key.code {
-                        KeyCode::Char('?') => {
-                            self.show_help = !self.show_help;
-                            Action::None
-                        }
-                        KeyCode::Char('q') => Action::Quit,
-                        KeyCode::Esc => {
-                            if self.router.current() == ViewId::Home {
-                                Action::Quit
-                            } else {
-                                Action::SwitchView(ViewId::Home)
-                            }
-                        }
-                        _ => current_view.handle_key(key, &mut self.resources),
-                    };
-
-                    if self.handle_action(action, &mut current_view, view_factory) {
-                        break;
-                    }
+                && let Event::Key(key) = event::read()?
+            {
+                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    break;
                 }
+
+                let action = match key.code {
+                    KeyCode::Char('?') => {
+                        self.show_help = !self.show_help;
+                        Action::None
+                    }
+                    KeyCode::Char('q') => Action::Quit,
+                    KeyCode::Esc => {
+                        if self.router.current() == ViewId::Home {
+                            Action::Quit
+                        } else {
+                            Action::SwitchView(ViewId::Home)
+                        }
+                    }
+                    _ => current_view.handle_key(key, &mut self.resources),
+                };
+
+                if self.handle_action(action, &mut current_view, view_factory) {
+                    break;
+                }
+            }
         }
 
         Ok(())

@@ -139,10 +139,8 @@ impl BatchSubmission {
     }
 
     pub fn blob_count_display(&self) -> String {
-        match self.actual_blobs {
-            Some(actual) => actual.to_string(),
-            None => format!("~{}", self.estimated_blobs),
-        }
+        self.actual_blobs
+            .map_or_else(|| format!("~{}", self.estimated_blobs), |actual| actual.to_string())
     }
 
     pub fn l1_block_display(&self) -> String {
@@ -444,6 +442,7 @@ pub fn build_gas_bar(
     Line::from(spans)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_batches_table(
     f: &mut Frame,
     area: Rect,

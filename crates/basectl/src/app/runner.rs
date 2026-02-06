@@ -83,9 +83,10 @@ fn start_background_services(config: &ChainConfig, resources: &mut Resources) {
             loop {
                 interval.tick().await;
                 if let Ok(status) = fetch_sync_status(&rpc_url).await
-                    && sync_tx.send(status.safe_l2.number).await.is_err() {
-                        break;
-                    }
+                    && sync_tx.send(status.safe_l2.number).await.is_err()
+                {
+                    break;
+                }
             }
         });
     }
