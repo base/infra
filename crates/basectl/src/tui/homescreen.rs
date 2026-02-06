@@ -30,6 +30,11 @@ pub struct MenuItem {
 /// Available menu items
 const MENU_ITEMS: &[MenuItem] = &[
     MenuItem {
+        key: 'c',
+        label: "Config",
+        description: "View chain configuration and L1 SystemConfig",
+    },
+    MenuItem {
         key: 'f',
         label: "Flashblocks",
         description: "Subscribe to flashblocks stream",
@@ -44,6 +49,7 @@ const MENU_ITEMS: &[MenuItem] = &[
 /// Selected command from homescreen
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HomeSelection {
+    Config,
     Flashblocks,
     Quit,
 }
@@ -70,6 +76,7 @@ fn run_homescreen_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Res
                 }
                 match key.code {
                     KeyCode::Char('q') => return Ok(HomeSelection::Quit),
+                    KeyCode::Char('c') => return Ok(HomeSelection::Config),
                     KeyCode::Char('f') => return Ok(HomeSelection::Flashblocks),
                     KeyCode::Up | KeyCode::Char('k') => {
                         selected_index = selected_index.saturating_sub(1);
@@ -81,7 +88,8 @@ fn run_homescreen_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Res
                     }
                     KeyCode::Enter => {
                         return Ok(match selected_index {
-                            0 => HomeSelection::Flashblocks,
+                            0 => HomeSelection::Config,
+                            1 => HomeSelection::Flashblocks,
                             _ => HomeSelection::Quit,
                         });
                     }
@@ -184,7 +192,18 @@ fn draw_menu(f: &mut Frame, area: Rect, selected_index: usize) {
         }
     }
 
-    let menu = Paragraph::new(lines).alignment(Alignment::Center);
+    // Create a centered container for the menu with left-aligned text inside
+    let menu_width = 60u16.min(area.width);
+    let horizontal_padding = area.width.saturating_sub(menu_width) / 2;
 
-    f.render_widget(menu, area);
+    let centered_area = Rect {
+        x: area.x + horizontal_padding,
+        y: area.y,
+        width: menu_width,
+        height: area.height,
+    };
+
+    let menu = Paragraph::new(lines).alignment(Alignment::Left);
+
+    f.render_widget(menu, centered_area);
 }

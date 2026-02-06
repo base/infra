@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use basectl_cli::commands::config::{ConfigCommand, run_config};
+use basectl_cli::commands::config::{ConfigCommand, run_config, default_view};
 use basectl_cli::commands::flashblocks::{FlashblocksCommand, run_flashblocks, default_subscribe};
 use basectl_cli::config::ChainConfig;
 use basectl_cli::tui::{run_homescreen, HomeSelection};
@@ -45,6 +45,7 @@ async fn main() -> anyhow::Result<()> {
         None => {
             // Show homescreen when no command provided
             match run_homescreen()? {
+                HomeSelection::Config => default_view(&chain_config).await,
                 HomeSelection::Flashblocks => default_subscribe(&chain_config).await,
                 HomeSelection::Quit => Ok(()),
             }

@@ -38,6 +38,11 @@ pub async fn run_config(command: ConfigCommand, config: &ChainConfig) -> Result<
     }
 }
 
+/// Run the default config view (called from homescreen)
+pub async fn default_view(config: &ChainConfig) -> Result<()> {
+    run_view(config).await
+}
+
 struct ConfigViewState {
     chain_config: ChainConfig,
     current: FullSystemConfig,
@@ -171,26 +176,29 @@ fn draw_config_view(f: &mut Frame, state: &ConfigViewState) {
 }
 
 fn draw_chain_config_table(f: &mut Frame, area: Rect, config: &ChainConfig) {
+    let label_style = Style::default().fg(Color::Cyan);
+    let value_style = Style::default().fg(Color::White);
+
     let rows = vec![
         Row::new(vec![
-            Cell::from("Name"),
-            Cell::from(config.name.clone()),
+            Cell::from("Name").style(label_style),
+            Cell::from(config.name.clone()).style(value_style),
         ]),
         Row::new(vec![
-            Cell::from("L2 RPC"),
-            Cell::from(config.rpc.to_string()),
+            Cell::from("L2 RPC").style(label_style),
+            Cell::from(config.rpc.to_string()).style(value_style),
         ]),
         Row::new(vec![
-            Cell::from("Flashblocks WS"),
-            Cell::from(config.flashblocks_ws.to_string()),
+            Cell::from("Flashblocks WS").style(label_style),
+            Cell::from(config.flashblocks_ws.to_string()).style(value_style),
         ]),
         Row::new(vec![
-            Cell::from("L1 RPC"),
-            Cell::from(config.l1_rpc.to_string()),
+            Cell::from("L1 RPC").style(label_style),
+            Cell::from(config.l1_rpc.to_string()).style(value_style),
         ]),
         Row::new(vec![
-            Cell::from("SystemConfig"),
-            Cell::from(format!("{:#x}", config.system_config)),
+            Cell::from("SystemConfig").style(label_style),
+            Cell::from(format!("{:#x}", config.system_config)).style(value_style),
         ]),
     ];
 
@@ -201,9 +209,10 @@ fn draw_chain_config_table(f: &mut Frame, area: Rect, config: &ChainConfig) {
     .block(
         Block::default()
             .borders(Borders::ALL)
-            .title(" Chain Configuration "),
-    )
-    .style(Style::default().fg(Color::White));
+            .border_style(Style::default().fg(Color::DarkGray))
+            .title(" Chain Configuration ")
+            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(table, area);
 }
@@ -239,26 +248,29 @@ fn draw_system_config_table(f: &mut Frame, area: Rect, state: &ConfigViewState) 
     .block(
         Block::default()
             .borders(Borders::ALL)
-            .title(" L1 SystemConfig (auto-refresh) "),
-    )
-    .style(Style::default().fg(Color::White));
+            .border_style(Style::default().fg(Color::DarkGray))
+            .title(" L1 SystemConfig (auto-refresh) ")
+            .title_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+    );
 
     f.render_widget(table, area);
 }
 
 fn make_row(field: &str, value: String, changed: bool) -> Row<'static> {
-    let style = if changed {
-        Style::default().fg(Color::Red)
+    let label_style = Style::default().fg(Color::Cyan);
+    let value_style = if changed {
+        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
     } else {
-        Style::default()
+        Style::default().fg(Color::White)
     };
 
     let status = if changed { "CHANGED" } else { "" };
+    let status_style = Style::default().fg(Color::Green).add_modifier(Modifier::BOLD);
 
     Row::new(vec![
-        Cell::from(field.to_string()),
-        Cell::from(value).style(style),
-        Cell::from(status).style(Style::default().fg(Color::Red)),
+        Cell::from(field.to_string()).style(label_style),
+        Cell::from(value).style(value_style),
+        Cell::from(status).style(status_style),
     ])
 }
 
