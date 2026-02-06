@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
 
+use basectl_cli::commands::config::{ConfigCommand, run_config};
 use basectl_cli::commands::flashblocks::{FlashblocksCommand, run_flashblocks, default_subscribe};
 use basectl_cli::config::ChainConfig;
 use basectl_cli::tui::{run_homescreen, HomeSelection};
@@ -18,6 +19,12 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Chain configuration operations
+    #[command(visible_alias = "c")]
+    Config {
+        #[command(subcommand)]
+        command: ConfigCommand,
+    },
     /// Flashblocks operations
     #[command(visible_alias = "f")]
     Flashblocks {
@@ -33,6 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let chain_config = ChainConfig::load(&cli.config)?;
 
     match cli.command {
+        Some(Commands::Config { command }) => run_config(command, &chain_config).await,
         Some(Commands::Flashblocks { command }) => run_flashblocks(command, &chain_config).await,
         None => {
             // Show homescreen when no command provided

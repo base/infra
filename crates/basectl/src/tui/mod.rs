@@ -9,5 +9,5 @@ pub use app_frame::{AppFrame, AppLayout};
 pub use help_sidebar::HelpSidebar;
 pub use homescreen::{run_homescreen, HomeSelection};
 pub use keybinding::Keybinding;
-pub use status_bar::StatusBar;
+pub use status_bar::{StatusBar, StatusInfo};
 pub use terminal::{restore_terminal, setup_terminal};

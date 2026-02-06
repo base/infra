@@ -1,8 +1,8 @@
 use ratatui::{layout::Rect, prelude::*};
 
-use super::{HelpSidebar, Keybinding, StatusBar};
+use super::{HelpSidebar, Keybinding, StatusBar, StatusInfo};
 
-/// Layout areas computed by AppFrame.
+/// Layout areas computed by `AppFrame`.
 #[derive(Debug)]
 pub struct AppLayout {
     /// Main content area.
@@ -59,9 +59,15 @@ impl AppFrame {
     }
 
     /// Renders the frame components (status bar and optional help sidebar).
-    pub fn render(f: &mut Frame, layout: &AppLayout, config_name: &str, keybindings: &[Keybinding]) {
+    pub fn render(
+        f: &mut Frame,
+        layout: &AppLayout,
+        config_name: &str,
+        keybindings: &[Keybinding],
+        status_info: Option<&StatusInfo>,
+    ) {
         // Render status bar
-        StatusBar::render(f, layout.status_bar, config_name);
+        StatusBar::render(f, layout.status_bar, config_name, status_info);
 
         // Render help sidebar if visible
         if let Some(sidebar_area) = layout.sidebar {

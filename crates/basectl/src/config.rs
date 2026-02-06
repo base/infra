@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use alloy_primitives::Address;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -9,6 +10,30 @@ pub struct ChainConfig {
     pub name: String,
     pub rpc: Url,
     pub flashblocks_ws: Url,
+    pub l1_rpc: Url,
+    #[serde(with = "address_serde")]
+    pub system_config: Address,
+}
+
+mod address_serde {
+    use alloy_primitives::Address;
+    use serde::{self, Deserialize, Deserializer, Serializer};
+    use std::str::FromStr;
+
+    pub(super) fn serialize<S>(address: &Address, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&format!("{address:#x}"))
+    }
+
+    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Address::from_str(&s).map_err(serde::de::Error::custom)
+    }
 }
 
 impl ChainConfig {
@@ -18,6 +43,10 @@ impl ChainConfig {
             name: "mainnet".to_string(),
             rpc: Url::parse("https://mainnet.base.org").unwrap(),
             flashblocks_ws: Url::parse("wss://mainnet.flashblocks.base.org/ws").unwrap(),
+            l1_rpc: Url::parse("https://ethereum-rpc.publicnode.com").unwrap(),
+            system_config: "0x73a79Fab69143498Ed3712e519A88a918e1f4072"
+                .parse()
+                .unwrap(),
         }
     }
 
@@ -27,6 +56,10 @@ impl ChainConfig {
             name: "sepolia".to_string(),
             rpc: Url::parse("https://sepolia.base.org").unwrap(),
             flashblocks_ws: Url::parse("wss://sepolia.flashblocks.base.org/ws").unwrap(),
+            l1_rpc: Url::parse("https://ethereum-sepolia-rpc.publicnode.com").unwrap(),
+            system_config: "0xf272670eb55e895584501d564AfEB048bEd26194"
+                .parse()
+                .unwrap(),
         }
     }
 
@@ -46,7 +79,7 @@ impl ChainConfig {
 
         // Check user config directory
         if let Some(config_dir) = Self::config_dir() {
-            let user_config_path = config_dir.join(format!("{}.yaml", name_or_path));
+            let user_config_path = config_dir.join(format!("{name_or_path}.yaml"));
             if user_config_path.exists() {
                 return Self::load_from_file(&user_config_path);
             }
@@ -59,10 +92,8 @@ impl ChainConfig {
         }
 
         anyhow::bail!(
-            "Config '{}' not found. Expected built-in name (mainnet, sepolia), \
-             user config at ~/.base/config/{}.yaml, or a valid file path.",
-            name_or_path,
-            name_or_path
+            "Config '{name_or_path}' not found. Expected built-in name (mainnet, sepolia), \
+             user config at ~/.base/config/{name_or_path}.yaml, or a valid file path."
         )
     }
 

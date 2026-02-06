@@ -24,3 +24,6 @@ alloy-provider = { workspace = true }
 alloy-rpc-types-eth = { workspace = true }
 base-flashtypes = { workspace = true }
 url = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-sol-types = { workspace = true }
+alloy-contract = { workspace = true }

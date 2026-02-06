@@ -14,7 +14,7 @@ use ratatui::{
 };
 
 use crate::config::ChainConfig;
-use crate::rpc::fetch_elasticity;
+use crate::rpc::{fetch_chain_params, ChainParams};
 use crate::tui::{restore_terminal, setup_terminal, AppFrame, Keybinding};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
@@ -59,8 +59,8 @@ pub async fn run_flashblocks(command: FlashblocksCommand, config: &ChainConfig) 
 
 /// Run the default flashblocks subscribe with TUI mode (called from homescreen)
 pub async fn default_subscribe(config: &ChainConfig) -> Result<()> {
-    let elasticity = fetch_elasticity(config.rpc.as_str()).await?;
-    run_tui_mode(config.flashblocks_ws.as_str(), &config.name, elasticity).await
+    let params = fetch_chain_params(config).await?;
+    run_tui_mode(config.flashblocks_ws.as_str(), &config.name, params).await
 }
 
 struct FlashblockEntry {
@@ -68,7 +68,7 @@ struct FlashblockEntry {
     index: u64,
     tx_count: usize,
     gas_used: u64,
-    gas_limit: Option<u64>,
+    gas_limit: u64,
     base_fee: Option<u128>,
     prev_base_fee: Option<u128>,
     timestamp: DateTime<Local>,
@@ -80,7 +80,7 @@ struct AppState {
     elasticity_multiplier: u64,
     flashblocks: VecDeque<FlashblockEntry>,
     message_count: u64,
-    current_gas_limit: Option<u64>,
+    current_gas_limit: u64,
     current_base_fee: Option<u128>,
     show_help: bool,
     table_state: TableState,
@@ -89,15 +89,15 @@ struct AppState {
 }
 
 impl AppState {
-    fn new(chain_name: String, elasticity_multiplier: u64) -> Self {
+    fn new(chain_name: String, params: ChainParams) -> Self {
         let mut table_state = TableState::default();
         table_state.select(Some(0));
         Self {
             chain_name,
-            elasticity_multiplier,
+            elasticity_multiplier: params.elasticity,
             flashblocks: VecDeque::with_capacity(MAX_FLASHBLOCKS),
             message_count: 0,
-            current_gas_limit: None,
+            current_gas_limit: params.gas_limit,
             current_base_fee: None,
             show_help: false,
             table_state,
@@ -120,7 +120,7 @@ impl AppState {
 
         // Update gas limit and base fee from base payload (present in FB#0)
         if let Some(ref base) = fb.base {
-            self.current_gas_limit = Some(base.gas_limit);
+            self.current_gas_limit = base.gas_limit;
             self.current_base_fee = base_fee;
         }
 
@@ -221,9 +221,9 @@ async fn run_subscribe(args: SubscribeArgs, config: &ChainConfig) -> Result<()> 
     if args.json {
         run_json_mode(ws_url).await
     } else {
-        // Fetch elasticity from RPC
-        let elasticity = fetch_elasticity(config.rpc.as_str()).await?;
-        run_tui_mode(ws_url, &config.name, elasticity).await
+        // Fetch chain params from L1 SystemConfig (with L2 fallback for elasticity)
+        let params = fetch_chain_params(config).await?;
+        run_tui_mode(ws_url, &config.name, params).await
     }
 }
 
@@ -241,13 +241,13 @@ async fn run_json_mode(url: &str) -> Result<()> {
                             println!("{}", serde_json::to_string(&fb)?);
                         }
                         Err(e) => {
-                            eprintln!("Failed to decode flashblock: {}", e);
+                            eprintln!("Failed to decode flashblock: {e}");
                         }
                     }
                 }
             }
             Err(e) => {
-                eprintln!("WebSocket error: {}", e);
+                eprintln!("WebSocket error: {e}");
                 break;
             }
         }
@@ -256,9 +256,9 @@ async fn run_json_mode(url: &str) -> Result<()> {
     Ok(())
 }
 
-async fn run_tui_mode(url: &str, chain_name: &str, elasticity: u64) -> Result<()> {
+async fn run_tui_mode(url: &str, chain_name: &str, params: ChainParams) -> Result<()> {
     let mut terminal = setup_terminal()?;
-    let result = run_tui_loop(&mut terminal, url, chain_name, elasticity).await;
+    let result = run_tui_loop(&mut terminal, url, chain_name, params).await;
     restore_terminal(&mut terminal)?;
     result
 }
@@ -284,15 +284,15 @@ async fn run_tui_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     url: &str,
     chain_name: &str,
-    elasticity: u64,
+    params: ChainParams,
 ) -> Result<()> {
     let (tx, mut rx) = mpsc::channel::<Flashblock>(100);
-    let mut state = AppState::new(chain_name.to_string(), elasticity);
+    let mut state = AppState::new(chain_name.to_string(), params);
 
     let ws_url = url.to_string();
     tokio::spawn(async move {
         if let Err(e) = run_ws_connection(ws_url, tx).await {
-            eprintln!("WebSocket error: {}", e);
+            eprintln!("WebSocket error: {e}");
         }
     });
 
@@ -302,9 +302,9 @@ async fn run_tui_loop(
         terminal.draw(|f| draw_ui(f, &mut state))?;
 
         // Handle events with timeout
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
+        if event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+                && key.kind == KeyEventKind::Press {
                     // Handle Ctrl+C to exit
                     if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
                         break;
@@ -322,8 +322,6 @@ async fn run_tui_loop(
                         _ => {}
                     }
                 }
-            }
-        }
 
         // Process WebSocket messages
         while let Ok(fb) = rx.try_recv() {
@@ -339,7 +337,7 @@ async fn run_tui_loop(
 fn draw_ui(f: &mut Frame, state: &mut AppState) {
     let layout = AppFrame::split_layout(f.area(), state.show_help);
     draw_table(f, layout.content, state);
-    AppFrame::render(f, &layout, &state.chain_name, KEYBINDINGS);
+    AppFrame::render(f, &layout, &state.chain_name, KEYBINDINGS, None);
 }
 
 // Bar uses eighth-blocks for fine granularity (8 levels per character)
@@ -356,10 +354,20 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     let header = Row::new(header_cells).height(1);
 
     let rows = state.flashblocks.iter().map(|fb| {
-        let delta_str = match fb.time_diff_ms {
-            Some(ms) => format!("+{}ms", ms),
-            None => "-".to_string(),
-        };
+        // Time delta with color: 150-250ms green, 100-150ms or 250-300ms yellow, else red
+        let delta_cell = fb.time_diff_ms.map_or_else(
+            || Cell::from("-".to_string()),
+            |ms| {
+                let color = if (150..=250).contains(&ms) {
+                    Color::Green
+                } else if (100..150).contains(&ms) || (250..300).contains(&ms) {
+                    Color::Yellow
+                } else {
+                    Color::Red
+                };
+                Cell::from(format!("+{ms}ms")).style(Style::default().fg(color))
+            },
+        );
 
         // Base fee only shown on FB#0, colored based on change direction
         let base_fee_cell = if fb.index == 0 {
@@ -391,7 +399,7 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             Cell::from(fb.tx_count.to_string()),
             Cell::from(format_gas(fb.gas_used)),
             base_fee_cell,
-            Cell::from(delta_str),
+            delta_cell,
             Cell::from(gas_bar),
             Cell::from(fb.timestamp.format("%H:%M:%S%.3f").to_string()),
         ];
@@ -423,7 +431,7 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     } else {
         let selected = state.table_state.selected().unwrap_or(0) + 1;
         let total = state.flashblocks.len();
-        format!(" Recent Flashblocks [{}/{}] ", selected, total)
+        format!(" Recent Flashblocks [{selected}/{total}] ")
     };
 
     let table = Table::new(rows, widths)
@@ -439,14 +447,12 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
     f.render_stateful_widget(table, area, &mut state.table_state);
 }
 
-fn build_gas_bar(gas_used: u64, gas_limit: Option<u64>, elasticity_multiplier: u64) -> Line<'static> {
-    let Some(limit) = gas_limit else {
-        return Line::from("-".to_string());
-    };
-
-    if limit == 0 {
+fn build_gas_bar(gas_used: u64, gas_limit: u64, elasticity_multiplier: u64) -> Line<'static> {
+    if gas_limit == 0 {
         return Line::from("-".to_string());
     }
+
+    let limit = gas_limit;
 
     // Gas target based on elasticity multiplier
     let gas_target = limit / elasticity_multiplier;
@@ -510,8 +516,8 @@ fn format_gas(gas: u64) -> String {
 fn format_gwei(wei: u128) -> String {
     let gwei = wei as f64 / 1_000_000_000.0;
     if gwei >= 1.0 {
-        format!("{:.2} gwei", gwei)
+        format!("{gwei:.2} gwei")
     } else {
-        format!("{:.4} gwei", gwei)
+        format!("{gwei:.4} gwei")
     }
 }

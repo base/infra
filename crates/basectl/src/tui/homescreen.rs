@@ -42,7 +42,7 @@ const MENU_ITEMS: &[MenuItem] = &[
 ];
 
 /// Selected command from homescreen
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HomeSelection {
     Flashblocks,
     Quit,
@@ -62,8 +62,8 @@ fn run_homescreen_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Res
     loop {
         terminal.draw(|f| draw_homescreen(f, selected_index))?;
 
-        if let Event::Key(key) = event::read()? {
-            if key.kind == KeyEventKind::Press {
+        if let Event::Key(key) = event::read()?
+            && key.kind == KeyEventKind::Press {
                 // Handle Ctrl+C to exit
                 if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
                     return Ok(HomeSelection::Quit);
@@ -88,7 +88,6 @@ fn run_homescreen_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> Res
                     _ => {}
                 }
             }
-        }
     }
 }
 

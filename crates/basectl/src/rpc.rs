@@ -2,7 +2,36 @@ use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types_eth::BlockNumberOrTag;
 use anyhow::Result;
 
+use crate::config::ChainConfig;
+use crate::l1_client::fetch_system_config_params;
+
 const DEFAULT_ELASTICITY: u64 = 6;
+
+/// Chain parameters needed for flashblocks display
+#[derive(Debug, Clone, Copy)]
+pub struct ChainParams {
+    pub gas_limit: u64,
+    pub elasticity: u64,
+}
+
+/// Fetch chain parameters, trying L1 first and falling back to L2.
+///
+/// This fetches `gas_limit` and elasticity from the L1 `SystemConfig` contract.
+/// If elasticity is not available on L1 (older `SystemConfig`), it falls back
+/// to fetching from L2 `extraData`.
+pub async fn fetch_chain_params(config: &ChainConfig) -> Result<ChainParams> {
+    let l1_params = fetch_system_config_params(config.l1_rpc.as_str(), config.system_config).await?;
+
+    let elasticity = match l1_params.elasticity {
+        Some(e) => e,
+        None => fetch_elasticity(config.rpc.as_str()).await?,
+    };
+
+    Ok(ChainParams {
+        gas_limit: l1_params.gas_limit,
+        elasticity,
+    })
+}
 
 /// Fetch the EIP-1559 elasticity multiplier from the L2 block extraData.
 /// Falls back to default (6) if extraData is not in Holocene format.

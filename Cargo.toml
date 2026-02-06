@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/mempool-rebroadcaster", "crates/sidecrush", "crates/basectl", "bin/basectl"]
+members = ["crates/*", "bin/*"]
 exclude = [".github/"]
 
 [workspace.package]
@@ -9,11 +9,38 @@ edition = "2024"
 license = "MIT"
 
 [workspace.lints.rust]
-missing_debug_implementations = "warn"
-unreachable_pub = "warn"
+missing-debug-implementations = "warn"
+unreachable-pub = "warn"
+unused-must-use = "deny"
+unnameable-types = "warn"
 
 [workspace.lints.clippy]
-all = "warn"
+all = { level = "warn", priority = -1 }
+missing-const-for-fn = "warn"
+redundant-clone = "warn"
+clone-on-ref-ptr = "warn"
+unnecessary-to-owned = "warn"
+cloned-instead-of-copied = "warn"
+flat-map-option = "warn"
+implicit-clone = "warn"
+or-fun-call = "warn"
+use-self = "warn"
+option-if-let-else = "warn"
+uninlined-format-args = "warn"
+manual-string-new = "warn"
+single-char-pattern = "warn"
+redundant-else = "warn"
+match-same-arms = "warn"
+undocumented-unsafe-blocks = "warn"
+doc-markdown = "warn"
+dbg-macro = "warn"
+branches-sharing-code = "warn"
+derive-partial-eq-without-eq = "warn"
+explicit-into-iter-loop = "warn"
+explicit-iter-loop = "warn"
+iter-with-drain = "warn"
+needless-pass-by-ref-mut = "warn"
+string-lit-as-bytes = "warn"
 
 [workspace.dependencies]
 clap = { version = "4.0", features = ["derive", "env"] }
@@ -52,6 +79,8 @@ alloy-provider = { version = "1.5.2" }
 alloy-hardforks = { version = "0.5" }
 alloy-rpc-client = { version = "1.5.2" }
 alloy-transport-http = { version = "1.5.2" }
+alloy-sol-types = { version = "1.5.2" }
+alloy-contract = { version = "1.5.2" }
 
 # op-alloy
 op-alloy-rpc-types = { version = "0.22.0", default-features = false }
