@@ -93,7 +93,7 @@ impl View for DaMonitorView {
         }
     }
 
-    fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources, _show_help: bool) {
+    fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(3), Constraint::Length(5), Constraint::Min(0)])

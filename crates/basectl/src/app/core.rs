@@ -54,13 +54,12 @@ impl App {
 
             terminal.draw(|frame| {
                 let layout = AppFrame::split_layout(frame.area(), self.show_help);
-                current_view.render(frame, layout.content, &self.resources, self.show_help);
+                current_view.render(frame, layout.content, &self.resources);
                 AppFrame::render(
                     frame,
                     &layout,
                     self.resources.chain_name(),
                     current_view.keybindings(),
-                    None,
                 );
             })?;
 

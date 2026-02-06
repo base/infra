@@ -12,7 +12,6 @@ const HELP_SIDEBAR_WIDTH: u16 = 30;
 pub struct AppLayout {
     pub content: Rect,
     pub sidebar: Option<Rect>,
-    pub status_bar: Rect,
 }
 
 #[derive(Debug)]
@@ -26,9 +25,9 @@ impl AppFrame {
                 .constraints([Constraint::Min(20), Constraint::Length(HELP_SIDEBAR_WIDTH)])
                 .split(area);
 
-            AppLayout { content: chunks[0], sidebar: Some(chunks[1]), status_bar: Rect::default() }
+            AppLayout { content: chunks[0], sidebar: Some(chunks[1]) }
         } else {
-            AppLayout { content: area, sidebar: None, status_bar: Rect::default() }
+            AppLayout { content: area, sidebar: None }
         }
     }
 
@@ -37,7 +36,6 @@ impl AppFrame {
         layout: &AppLayout,
         config_name: &str,
         keybindings: &[Keybinding],
-        _status_info: Option<&()>,
     ) {
         if let Some(sidebar) = layout.sidebar {
             render_help_sidebar(f, sidebar, config_name, keybindings);

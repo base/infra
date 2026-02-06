@@ -103,7 +103,7 @@ impl View for HomeView {
         }
     }
 
-    fn render(&mut self, frame: &mut Frame, area: Rect, _resources: &Resources, _show_help: bool) {
+    fn render(&mut self, frame: &mut Frame, area: Rect, _resources: &Resources) {
         let logo_height = LOGO.lines().count() as u16;
         let menu_height = (MENU_ITEMS.len() * 2) as u16 + 2;
         let total_content_height = logo_height + menu_height + 3;

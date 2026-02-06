@@ -130,7 +130,7 @@ impl View for FlashblocksView {
         Action::None
     }
 
-    fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources, _show_help: bool) {
+    fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources) {
         let flash = &resources.flash;
 
         let title = if flash.paused {
