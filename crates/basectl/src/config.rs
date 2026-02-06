@@ -11,29 +11,7 @@ pub struct ChainConfig {
     pub rpc: Url,
     pub flashblocks_ws: Url,
     pub l1_rpc: Url,
-    #[serde(with = "address_serde")]
     pub system_config: Address,
-}
-
-mod address_serde {
-    use alloy_primitives::Address;
-    use serde::{self, Deserialize, Deserializer, Serializer};
-    use std::str::FromStr;
-
-    pub(super) fn serialize<S>(address: &Address, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&format!("{address:#x}"))
-    }
-
-    pub(super) fn deserialize<'de, D>(deserializer: D) -> Result<Address, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Address::from_str(&s).map_err(serde::de::Error::custom)
-    }
 }
 
 impl ChainConfig {

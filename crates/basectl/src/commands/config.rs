@@ -4,7 +4,9 @@ use std::time::{Duration, Instant};
 use alloy_primitives::{hex, Address};
 use anyhow::Result;
 use clap::Subcommand;
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
+use futures_util::StreamExt;
+use tokio::time::interval;
 use ratatui::{
     layout::{Constraint, Rect},
     prelude::*,
@@ -14,7 +16,7 @@ use ratatui::{
 use crate::{
     config::ChainConfig,
     l1_client::{fetch_full_system_config, FullSystemConfig},
-    tui::{restore_terminal, setup_terminal, AppFrame, Keybinding, StatusInfo},
+    tui::{restore_terminal, setup_terminal, AppFrame, Keybinding, NavResult, StatusInfo},
 };
 
 const REFRESH_INTERVAL: Duration = Duration::from_secs(12);
@@ -22,6 +24,7 @@ const REFRESH_INTERVAL: Duration = Duration::from_secs(12);
 const KEYBINDINGS: &[Keybinding] = &[
     Keybinding::new("r", "Refresh now"),
     Keybinding::new("?", "Toggle help"),
+    Keybinding::new("h", "Home"),
     Keybinding::new("q", "Quit"),
 ];
 
@@ -39,8 +42,11 @@ pub async fn run_config(command: ConfigCommand, config: &ChainConfig) -> Result<
 }
 
 /// Run the default config view (called from homescreen)
-pub async fn default_view(config: &ChainConfig) -> Result<()> {
-    run_view(config).await
+pub async fn default_view(config: &ChainConfig) -> Result<NavResult> {
+    let mut terminal = setup_terminal()?;
+    let result = run_view_loop(&mut terminal, config).await;
+    restore_terminal(&mut terminal)?;
+    result
 }
 
 struct ConfigViewState {
@@ -79,16 +85,18 @@ impl ConfigViewState {
 
 async fn run_view(config: &ChainConfig) -> Result<()> {
     let mut terminal = setup_terminal()?;
-    let result = run_view_loop(&mut terminal, config).await;
+    let _ = run_view_loop(&mut terminal, config).await?;
     restore_terminal(&mut terminal)?;
-    result
+    Ok(())
 }
 
 async fn run_view_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     config: &ChainConfig,
-) -> Result<()> {
+) -> Result<NavResult> {
     let mut state = ConfigViewState::new(config.clone());
+    let mut events = EventStream::new();
+    let mut refresh_interval = interval(Duration::from_millis(100));
 
     // Initial fetch
     do_fetch(&mut state).await;
@@ -96,25 +104,26 @@ async fn run_view_loop(
     loop {
         terminal.draw(|f| draw_config_view(f, &state))?;
 
-        // Check for auto-refresh
-        if state.should_refresh() && !state.is_fetching {
-            do_fetch(&mut state).await;
-        }
-
-        // Poll for events with a short timeout to allow refresh checks
-        if event::poll(Duration::from_millis(100))?
-            && let Event::Key(key) = event::read()?
-            && key.kind == KeyEventKind::Press
-        {
-            // Handle Ctrl+C to exit
-            if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-                return Ok(());
+        tokio::select! {
+            _ = refresh_interval.tick() => {
+                if state.should_refresh() && !state.is_fetching {
+                    do_fetch(&mut state).await;
+                }
             }
-            match key.code {
-                KeyCode::Char('q') => return Ok(()),
-                KeyCode::Char('?') => state.show_help = !state.show_help,
-                KeyCode::Char('r') if !state.is_fetching => do_fetch(&mut state).await,
-                _ => {}
+            Some(Ok(Event::Key(key))) = events.next() => {
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    return Ok(NavResult::Quit);
+                }
+                match key.code {
+                    KeyCode::Char('q') => return Ok(NavResult::Quit),
+                    KeyCode::Char('h') => return Ok(NavResult::Home),
+                    KeyCode::Char('?') => state.show_help = !state.show_help,
+                    KeyCode::Char('r') if !state.is_fetching => do_fetch(&mut state).await,
+                    _ => {}
+                }
             }
         }
     }

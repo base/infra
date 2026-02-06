@@ -12,7 +12,7 @@ name = "basectl"
 path = "main.rs"
 
 [dependencies]
-basectl-cli = { path = "../../crates/basectl" }
+basectl-cli = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }

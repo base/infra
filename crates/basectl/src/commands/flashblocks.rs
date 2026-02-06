@@ -1,12 +1,11 @@
 use std::collections::VecDeque;
 use std::io::Stdout;
-use std::time::Duration;
 
 use anyhow::Result;
 use base_flashtypes::Flashblock;
 use chrono::{DateTime, Local};
 use clap::{Args, Subcommand};
-use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
 use ratatui::{
     prelude::*,
@@ -15,14 +14,13 @@ use ratatui::{
 
 use crate::config::ChainConfig;
 use crate::rpc::{fetch_chain_params, ChainParams};
-use crate::tui::{restore_terminal, setup_terminal, AppFrame, Keybinding};
+use crate::tui::{restore_terminal, setup_terminal, AppFrame, Keybinding, NavResult};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 
 const MAX_FLASHBLOCKS: usize = 10_000;
 
 const KEYBINDINGS: &[Keybinding] = &[
-    Keybinding::new("q", "Quit"),
     Keybinding::new("?", "Toggle help"),
     Keybinding::new("Space", "Pause/Resume"),
     Keybinding::new("Up/k", "Scroll up"),
@@ -31,6 +29,8 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding::new("PgDn", "Page down"),
     Keybinding::new("Home/g", "Top (auto-scroll)"),
     Keybinding::new("End/G", "Bottom"),
+    Keybinding::new("h", "Home"),
+    Keybinding::new("q", "Quit"),
 ];
 
 #[derive(Debug, Subcommand)]
@@ -58,9 +58,18 @@ pub async fn run_flashblocks(command: FlashblocksCommand, config: &ChainConfig) 
 }
 
 /// Run the default flashblocks subscribe with TUI mode (called from homescreen)
-pub async fn default_subscribe(config: &ChainConfig) -> Result<()> {
-    let params = fetch_chain_params(config).await?;
-    run_tui_mode(config.flashblocks_ws.as_str(), &config.name, params).await
+pub async fn default_subscribe(config: &ChainConfig) -> Result<NavResult> {
+    let mut terminal = setup_terminal()?;
+    let params = match fetch_chain_params(config).await {
+        Ok(params) => params,
+        Err(e) => {
+            restore_terminal(&mut terminal)?;
+            return Err(e);
+        }
+    };
+    let result = run_tui_loop(&mut terminal, config.flashblocks_ws.as_str(), &config.name, params).await;
+    restore_terminal(&mut terminal)?;
+    result
 }
 
 struct FlashblockEntry {
@@ -258,9 +267,9 @@ async fn run_json_mode(url: &str) -> Result<()> {
 
 async fn run_tui_mode(url: &str, chain_name: &str, params: ChainParams) -> Result<()> {
     let mut terminal = setup_terminal()?;
-    let result = run_tui_loop(&mut terminal, url, chain_name, params).await;
+    let _ = run_tui_loop(&mut terminal, url, chain_name, params).await?;
     restore_terminal(&mut terminal)?;
-    result
+    Ok(())
 }
 
 async fn run_ws_connection(url: String, tx: mpsc::Sender<Flashblock>) -> Result<()> {
@@ -285,9 +294,10 @@ async fn run_tui_loop(
     url: &str,
     chain_name: &str,
     params: ChainParams,
-) -> Result<()> {
+) -> Result<NavResult> {
     let (tx, mut rx) = mpsc::channel::<Flashblock>(100);
     let mut state = AppState::new(chain_name.to_string(), params);
+    let mut events = EventStream::new();
 
     let ws_url = url.to_string();
     tokio::spawn(async move {
@@ -297,41 +307,38 @@ async fn run_tui_loop(
     });
 
     loop {
-        // Draw UI
-        let content_height = terminal.size()?.height.saturating_sub(5) as usize; // Approximate visible rows
+        let content_height = terminal.size()?.height.saturating_sub(5) as usize;
         terminal.draw(|f| draw_ui(f, &mut state))?;
 
-        // Handle events with timeout
-        if event::poll(Duration::from_millis(100))?
-            && let Event::Key(key) = event::read()?
-                && key.kind == KeyEventKind::Press {
-                    // Handle Ctrl+C to exit
-                    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-                        break;
-                    }
-                    match key.code {
-                        KeyCode::Char('q') => break,
-                        KeyCode::Char('?') => state.show_help = !state.show_help,
-                        KeyCode::Char(' ') => state.paused = !state.paused,
-                        KeyCode::Up | KeyCode::Char('k') => state.scroll_up(),
-                        KeyCode::Down | KeyCode::Char('j') => state.scroll_down(),
-                        KeyCode::PageUp => state.page_up(content_height),
-                        KeyCode::PageDown => state.page_down(content_height),
-                        KeyCode::Home | KeyCode::Char('g') => state.scroll_to_top(),
-                        KeyCode::End | KeyCode::Char('G') => state.scroll_to_bottom(),
-                        _ => {}
-                    }
+        tokio::select! {
+            Some(Ok(Event::Key(key))) = events.next() => {
+                if key.kind != KeyEventKind::Press {
+                    continue;
                 }
-
-        // Process WebSocket messages
-        while let Ok(fb) = rx.try_recv() {
-            if !state.paused {
-                state.add_flashblock(fb);
+                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                    return Ok(NavResult::Quit);
+                }
+                match key.code {
+                    KeyCode::Char('q') => return Ok(NavResult::Quit),
+                    KeyCode::Char('h') => return Ok(NavResult::Home),
+                    KeyCode::Char('?') => state.show_help = !state.show_help,
+                    KeyCode::Char(' ') => state.paused = !state.paused,
+                    KeyCode::Up | KeyCode::Char('k') => state.scroll_up(),
+                    KeyCode::Down | KeyCode::Char('j') => state.scroll_down(),
+                    KeyCode::PageUp => state.page_up(content_height),
+                    KeyCode::PageDown => state.page_down(content_height),
+                    KeyCode::Home | KeyCode::Char('g') => state.scroll_to_top(),
+                    KeyCode::End | KeyCode::Char('G') => state.scroll_to_bottom(),
+                    _ => {}
+                }
+            }
+            Some(fb) = rx.recv() => {
+                if !state.paused {
+                    state.add_flashblock(fb);
+                }
             }
         }
     }
-
-    Ok(())
 }
 
 fn draw_ui(f: &mut Frame, state: &mut AppState) {

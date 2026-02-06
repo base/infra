@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use basectl_cli::commands::config::{ConfigCommand, run_config, default_view};
 use basectl_cli::commands::flashblocks::{FlashblocksCommand, run_flashblocks, default_subscribe};
 use basectl_cli::config::ChainConfig;
-use basectl_cli::tui::{run_homescreen, HomeSelection};
+use basectl_cli::tui::{run_homescreen, HomeSelection, NavResult};
 
 #[derive(Debug, Parser)]
 #[command(name = "basectl")]
@@ -44,10 +44,15 @@ async fn main() -> anyhow::Result<()> {
         Some(Commands::Flashblocks { command }) => run_flashblocks(command, &chain_config).await,
         None => {
             // Show homescreen when no command provided
-            match run_homescreen()? {
-                HomeSelection::Config => default_view(&chain_config).await,
-                HomeSelection::Flashblocks => default_subscribe(&chain_config).await,
-                HomeSelection::Quit => Ok(()),
+            loop {
+                let next = match run_homescreen()? {
+                    HomeSelection::Config => default_view(&chain_config).await?,
+                    HomeSelection::Flashblocks => default_subscribe(&chain_config).await?,
+                    HomeSelection::Quit => return Ok(()),
+                };
+                if next == NavResult::Quit {
+                    return Ok(());
+                }
             }
         }
     }
