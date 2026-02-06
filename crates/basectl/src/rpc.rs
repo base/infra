@@ -197,9 +197,8 @@ pub async fn run_block_fetcher(
     mut request_rx: mpsc::Receiver<u64>,
     result_tx: mpsc::Sender<BlockDaInfo>,
 ) {
-    let provider = match ProviderBuilder::new().connect(&l2_rpc).await {
-        Ok(p) => p,
-        Err(_) => return,
+    let Ok(provider) = ProviderBuilder::new().connect(&l2_rpc).await else {
+        return;
     };
 
     while let Some(block_num) = request_rx.recv().await {
@@ -285,9 +284,8 @@ pub async fn run_l1_batcher_watcher(
     batcher_address: Address,
     result_tx: mpsc::Sender<BlobSubmission>,
 ) {
-    let provider = match ProviderBuilder::new().connect(&l1_rpc).await {
-        Ok(p) => p,
-        Err(_) => return,
+    let Ok(provider) = ProviderBuilder::new().connect(&l1_rpc).await else {
+        return;
     };
 
     let mut last_block: Option<u64> = None;
@@ -296,12 +294,11 @@ pub async fn run_l1_batcher_watcher(
     loop {
         interval.tick().await;
 
-        let latest = match provider.get_block_number().await {
-            Ok(n) => n,
-            Err(_) => continue,
+        let Ok(latest) = provider.get_block_number().await else {
+            continue;
         };
 
-        let start_block = last_block.map(|b| b + 1).unwrap_or_else(|| latest.saturating_sub(5));
+        let start_block = last_block.map_or_else(|| latest.saturating_sub(5), |b| b + 1);
 
         for block_num in start_block..=latest {
             if let Ok(Some(block)) =

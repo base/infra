@@ -296,9 +296,9 @@ fn render_config_panel(f: &mut Frame, area: Rect, resources: &Resources) {
             let denominator = sys.eip1559_denominator.unwrap_or(0);
 
             let basefee_scalar =
-                sys.basefee_scalar.map(|s| s.to_string()).unwrap_or_else(|| "-".to_string());
+                sys.basefee_scalar.map_or_else(|| "-".to_string(), |s| s.to_string());
             let blobbasefee_scalar =
-                sys.blobbasefee_scalar.map(|s| s.to_string()).unwrap_or_else(|| "-".to_string());
+                sys.blobbasefee_scalar.map_or_else(|| "-".to_string(), |s| s.to_string());
 
             vec![
                 Line::from(vec![
@@ -370,7 +370,7 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
         Line::from(vec![
             Span::styled("Last batch: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
-                time_since.map(format_duration).unwrap_or_else(|| "-".to_string()),
+                time_since.map_or_else(|| "-".to_string(), format_duration),
                 Style::default().fg(Color::White),
             ),
             Span::raw("  "),
@@ -519,7 +519,7 @@ fn render_flash_panel(
             };
 
             let (base_fee_str, base_fee_style) = if entry.index == 0 {
-                let fee_str = entry.base_fee.map(format_gwei).unwrap_or_else(|| "-".to_string());
+                let fee_str = entry.base_fee.map_or_else(|| "-".to_string(), format_gwei);
                 let style = match (entry.base_fee, entry.prev_base_fee) {
                     (Some(curr), Some(prev)) if curr > prev => Style::default().fg(Color::Red),
                     (Some(curr), Some(prev)) if curr < prev => Style::default().fg(Color::Green),

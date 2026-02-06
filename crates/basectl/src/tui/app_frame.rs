@@ -43,7 +43,12 @@ impl AppFrame {
     }
 }
 
-fn render_help_sidebar(f: &mut Frame, area: Rect, config_name: &str, keybindings: &[Keybinding]) {
+fn render_help_sidebar(
+    f: &mut Frame,
+    area: Rect,
+    config_name: &str,
+    keybindings: &[Keybinding],
+) {
     let block = Block::default()
         .title(format!(" Help [{config_name}] "))
         .borders(Borders::ALL)

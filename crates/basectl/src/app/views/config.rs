@@ -63,11 +63,8 @@ impl View for ConfigView {
 fn render_chain_config(f: &mut Frame, area: Rect, resources: &Resources) {
     let config = &resources.config;
 
-    let batcher_str = config
-        .batcher_address
-        .as_ref()
-        .map(|a| format!("{a:#x}"))
-        .unwrap_or_else(|| "-".to_string());
+    let batcher_str =
+        config.batcher_address.as_ref().map_or_else(|| "-".to_string(), |a| format!("{a:#x}"));
 
     let mut lines = vec![
         Line::from(vec![
@@ -84,7 +81,7 @@ fn render_chain_config(f: &mut Frame, area: Rect, resources: &Resources) {
         ("RPC", config.rpc.as_str()),
         ("Flashblocks WS", config.flashblocks_ws.as_str()),
         ("L1 RPC", config.l1_rpc.as_str()),
-        ("Op-Node RPC", config.op_node_rpc.as_ref().map(|u| u.as_str()).unwrap_or("-")),
+        ("Op-Node RPC", config.op_node_rpc.as_ref().map_or("-", |u| u.as_str())),
         ("Batcher Address", &batcher_str),
     ];
 
@@ -113,12 +110,11 @@ fn render_system_config(f: &mut Frame, area: Rect, resources: &Resources) {
 
     let content = match &resources.system_config {
         Some(sys) => {
-            let gas_limit_str =
-                sys.gas_limit.map(|g| g.to_string()).unwrap_or_else(|| "-".to_string());
+            let gas_limit_str = sys.gas_limit.map_or_else(|| "-".to_string(), |g| g.to_string());
             let elasticity_str =
-                sys.eip1559_elasticity.map(|e| e.to_string()).unwrap_or_else(|| "-".to_string());
+                sys.eip1559_elasticity.map_or_else(|| "-".to_string(), |e| e.to_string());
             let denominator_str =
-                sys.eip1559_denominator.map(|d| d.to_string()).unwrap_or_else(|| "-".to_string());
+                sys.eip1559_denominator.map_or_else(|| "-".to_string(), |d| d.to_string());
 
             let lines = vec![
                 Line::from(vec![
