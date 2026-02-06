@@ -12,8 +12,8 @@ use ratatui::{
 
 use crate::rpc::BlobSubmission;
 
-pub(super) const BLOB_SIZE: u64 = 128 * 1024;
-pub(super) const MAX_HISTORY: usize = 1000;
+pub const BLOB_SIZE: u64 = 128 * 1024;
+pub const MAX_HISTORY: usize = 1000;
 
 const BLOCK_COLORS: [Color; 24] = [
     Color::Rgb(0, 82, 255),
@@ -45,11 +45,38 @@ const BLOCK_COLORS: [Color; 24] = [
 const EIGHTH_BLOCKS: [char; 8] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
 
 // =============================================================================
+// Color Constants
+// =============================================================================
+
+// Primary colors
+pub const COLOR_BASE_BLUE: Color = Color::Rgb(0, 82, 255);
+pub const COLOR_ACTIVE_BORDER: Color = Color::Rgb(100, 180, 255);
+
+// Table background colors
+pub const COLOR_ROW_SELECTED: Color = Color::Rgb(60, 60, 80);
+pub const COLOR_ROW_HIGHLIGHTED: Color = Color::Rgb(40, 40, 60);
+
+// Rate/status colors
+pub const COLOR_GROWTH: Color = Color::Rgb(255, 180, 100);
+pub const COLOR_BURN: Color = Color::Rgb(100, 200, 100);
+pub const COLOR_TARGET: Color = Color::Rgb(255, 200, 100);
+pub const COLOR_GAS_FILL: Color = Color::Rgb(100, 180, 255);
+
+// =============================================================================
+// Duration Constants
+// =============================================================================
+
+pub const EVENT_POLL_TIMEOUT: Duration = Duration::from_millis(100);
+pub const RATE_WINDOW_30S: Duration = Duration::from_secs(30);
+pub const RATE_WINDOW_2M: Duration = Duration::from_secs(120);
+pub const RATE_WINDOW_5M: Duration = Duration::from_secs(300);
+
+// =============================================================================
 // Shared Data Types
 // =============================================================================
 
 #[derive(Clone)]
-pub(super) struct FlashblockEntry {
+pub struct FlashblockEntry {
     pub block_number: u64,
     pub index: u64,
     pub tx_count: usize,
@@ -62,14 +89,14 @@ pub(super) struct FlashblockEntry {
 }
 
 #[derive(Clone)]
-pub(super) struct BlockContribution {
+pub struct BlockContribution {
     pub block_number: u64,
     pub da_bytes: u64,
     pub timestamp: Instant,
 }
 
 #[derive(Clone)]
-pub(super) struct BatchSubmission {
+pub struct BatchSubmission {
     pub da_bytes: u64,
     pub estimated_blobs: u64,
     pub actual_blobs: Option<u64>,
@@ -82,7 +109,7 @@ pub(super) struct BatchSubmission {
 }
 
 impl BatchSubmission {
-    pub(super) fn new(da_bytes: u64, blocks_submitted: u64, block_range: (u64, u64)) -> Self {
+    pub fn new(da_bytes: u64, blocks_submitted: u64, block_range: (u64, u64)) -> Self {
         Self {
             da_bytes,
             estimated_blobs: da_bytes.div_ceil(BLOB_SIZE),
@@ -96,47 +123,47 @@ impl BatchSubmission {
         }
     }
 
-    pub(super) fn record_l1_submission(&mut self, blob_sub: &BlobSubmission) {
+    pub fn record_l1_submission(&mut self, blob_sub: &BlobSubmission) {
         self.actual_blobs = Some(blob_sub.blob_count);
         self.l1_blob_bytes = Some(blob_sub.l1_blob_bytes);
         self.l1_block_number = Some(blob_sub.block_number);
         self.l1_block_hash = Some(blob_sub.block_hash);
     }
 
-    pub(super) fn has_l1_data(&self) -> bool {
+    pub fn has_l1_data(&self) -> bool {
         self.actual_blobs.is_some()
     }
 
-    pub(super) fn compression_ratio(&self) -> Option<f64> {
+    pub fn compression_ratio(&self) -> Option<f64> {
         self.l1_blob_bytes.filter(|&b| b > 0).map(|l1_bytes| self.da_bytes as f64 / l1_bytes as f64)
     }
 
-    pub(super) fn blob_count_display(&self) -> String {
+    pub fn blob_count_display(&self) -> String {
         match self.actual_blobs {
             Some(actual) => actual.to_string(),
             None => format!("~{}", self.estimated_blobs),
         }
     }
 
-    pub(super) fn l1_block_display(&self) -> String {
+    pub fn l1_block_display(&self) -> String {
         self.l1_block_number.map(|n| n.to_string()).unwrap_or_else(|| "-".to_string())
     }
 
-    pub(super) fn compression_display(&self) -> String {
+    pub fn compression_display(&self) -> String {
         self.compression_ratio().map(|r| format!("{r:.2}x")).unwrap_or_else(|| "-".to_string())
     }
 }
 
-pub(super) struct RateTracker {
+pub struct RateTracker {
     samples: VecDeque<(Instant, u64)>,
 }
 
 impl RateTracker {
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Self { samples: VecDeque::with_capacity(300) }
     }
 
-    pub(super) fn add_sample(&mut self, bytes: u64) {
+    pub fn add_sample(&mut self, bytes: u64) {
         let now = Instant::now();
         self.samples.push_back((now, bytes));
         let cutoff = now - Duration::from_secs(300);
@@ -145,7 +172,7 @@ impl RateTracker {
         }
     }
 
-    pub(super) fn rate_over(&self, duration: Duration) -> Option<f64> {
+    pub fn rate_over(&self, duration: Duration) -> Option<f64> {
         let now = Instant::now();
         let cutoff = now - duration;
         let samples_in_window: Vec<_> = self.samples.iter().filter(|(t, _)| *t >= cutoff).collect();
@@ -160,7 +187,7 @@ impl RateTracker {
     }
 }
 
-pub(super) struct LoadingState {
+pub struct LoadingState {
     pub current_block: u64,
     pub total_blocks: u64,
 }
@@ -169,7 +196,7 @@ pub(super) struct LoadingState {
 // DA Tracker - Shared State Management for DA Monitoring
 // =============================================================================
 
-pub(super) struct DaTracker {
+pub struct DaTracker {
     pub safe_l2_block: u64,
     pub da_backlog_bytes: u64,
     pub block_contributions: VecDeque<BlockContribution>,
@@ -180,7 +207,7 @@ pub(super) struct DaTracker {
 }
 
 impl DaTracker {
-    pub(super) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             safe_l2_block: 0,
             da_backlog_bytes: 0,
@@ -192,12 +219,12 @@ impl DaTracker {
         }
     }
 
-    pub(super) fn set_initial_backlog(&mut self, safe_block: u64, da_bytes: u64) {
+    pub fn set_initial_backlog(&mut self, safe_block: u64, da_bytes: u64) {
         self.safe_l2_block = safe_block;
         self.da_backlog_bytes = da_bytes;
     }
 
-    pub(super) fn add_block(&mut self, block_number: u64, da_bytes: u64) {
+    pub fn add_block(&mut self, block_number: u64, da_bytes: u64) {
         if block_number <= self.safe_l2_block {
             return;
         }
@@ -212,7 +239,7 @@ impl DaTracker {
         }
     }
 
-    pub(super) fn update_block_da(&mut self, block_number: u64, accurate_da_bytes: u64) {
+    pub fn update_block_da(&mut self, block_number: u64, accurate_da_bytes: u64) {
         for contrib in &mut self.block_contributions {
             if contrib.block_number == block_number {
                 let diff = accurate_da_bytes as i64 - contrib.da_bytes as i64;
@@ -231,7 +258,7 @@ impl DaTracker {
         }
     }
 
-    pub(super) fn update_safe_head(&mut self, safe_block: u64) -> Option<BatchSubmission> {
+    pub fn update_safe_head(&mut self, safe_block: u64) -> Option<BatchSubmission> {
         if safe_block <= self.safe_l2_block {
             return None;
         }
@@ -270,14 +297,14 @@ impl DaTracker {
         }
     }
 
-    pub(super) fn record_l1_blob_submission(&mut self, blob_sub: &BlobSubmission) {
+    pub fn record_l1_blob_submission(&mut self, blob_sub: &BlobSubmission) {
         if let Some(submission) = self.batch_submissions.iter_mut().rev().find(|s| !s.has_l1_data())
         {
             submission.record_l1_submission(blob_sub);
         }
     }
 
-    pub(super) fn find_batch_for_block(&self, block_number: u64) -> Option<usize> {
+    pub fn find_batch_for_block(&self, block_number: u64) -> Option<usize> {
         self.batch_submissions
             .iter()
             .position(|b| block_number >= b.block_range.0 && block_number <= b.block_range.1)
@@ -288,7 +315,7 @@ impl DaTracker {
 // Formatting Functions
 // =============================================================================
 
-pub(super) fn format_bytes(bytes: u64) -> String {
+pub fn format_bytes(bytes: u64) -> String {
     if bytes >= 1_000_000_000 {
         format!("{:.1}G", bytes as f64 / 1_000_000_000.0)
     } else if bytes >= 1_000_000 {
@@ -300,7 +327,7 @@ pub(super) fn format_bytes(bytes: u64) -> String {
     }
 }
 
-pub(super) fn format_gas(gas: u64) -> String {
+pub fn format_gas(gas: u64) -> String {
     if gas >= 1_000_000 {
         format!("{:.1}M", gas as f64 / 1_000_000.0)
     } else if gas >= 1_000 {
@@ -310,7 +337,7 @@ pub(super) fn format_gas(gas: u64) -> String {
     }
 }
 
-pub(super) fn format_duration(d: Duration) -> String {
+pub fn format_duration(d: Duration) -> String {
     let secs = d.as_secs();
     if secs >= 3600 {
         format!("{}h{}m", secs / 3600, (secs % 3600) / 60)
@@ -321,7 +348,7 @@ pub(super) fn format_duration(d: Duration) -> String {
     }
 }
 
-pub(super) fn format_rate(rate: Option<f64>) -> String {
+pub fn format_rate(rate: Option<f64>) -> String {
     match rate {
         Some(r) if r >= 1_000_000.0 => format!("{:.1}M/s", r / 1_000_000.0),
         Some(r) if r >= 1_000.0 => format!("{:.1}K/s", r / 1_000.0),
@@ -330,7 +357,12 @@ pub(super) fn format_rate(rate: Option<f64>) -> String {
     }
 }
 
-pub(super) const fn backlog_size_color(bytes: u64) -> Color {
+pub fn format_gwei(wei: u128) -> String {
+    let gwei = wei as f64 / 1_000_000_000.0;
+    if gwei >= 1.0 { format!("{gwei:.2} gwei") } else { format!("{gwei:.4} gwei") }
+}
+
+pub const fn backlog_size_color(bytes: u64) -> Color {
     if bytes < 5_000_000 {
         Color::Rgb(100, 200, 100)
     } else if bytes < 10_000_000 {
@@ -348,11 +380,11 @@ pub(super) const fn backlog_size_color(bytes: u64) -> Color {
     }
 }
 
-pub(super) const fn block_color(block_number: u64) -> Color {
+pub const fn block_color(block_number: u64) -> Color {
     BLOCK_COLORS[(block_number as usize) % BLOCK_COLORS.len()]
 }
 
-pub(super) fn build_gas_bar(
+pub fn build_gas_bar(
     gas_used: u64,
     gas_limit: u64,
     elasticity: u64,
@@ -369,8 +401,8 @@ pub(super) fn build_gas_bar(
     let filled_units = ((gas_used as f64 / gas_limit as f64) * bar_units as f64).round() as usize;
     let filled_units = filled_units.min(bar_units);
 
-    let fill_color = Color::Rgb(100, 180, 255);
-    let target_color = Color::Rgb(255, 200, 100);
+    let fill_color = COLOR_GAS_FILL;
+    let target_color = COLOR_TARGET;
 
     let mut spans = Vec::new();
     let mut current_units = 0;
@@ -403,76 +435,7 @@ pub(super) fn build_gas_bar(
     Line::from(spans)
 }
 
-// =============================================================================
-// Reusable Render Functions
-// =============================================================================
-
-pub(super) fn render_blocks_table(
-    f: &mut Frame,
-    area: Rect,
-    contributions: &VecDeque<BlockContribution>,
-    safe_block: u64,
-    is_active: bool,
-    selected_row: usize,
-    highlighted_block: Option<u64>,
-    title: &str,
-) {
-    let border_color = if is_active { Color::Rgb(100, 180, 255) } else { Color::DarkGray };
-
-    let block = Block::default()
-        .title(format!(" {title} "))
-        .borders(Borders::ALL)
-        .border_style(Style::default().fg(border_color));
-
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
-    let header_style = Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD);
-    let header = Row::new(vec![
-        Cell::from("Block").style(header_style),
-        Cell::from("DA").style(header_style),
-        Cell::from("Age").style(header_style),
-    ]);
-
-    let rows: Vec<Row> = contributions
-        .iter()
-        .take(inner.height.saturating_sub(1) as usize)
-        .enumerate()
-        .map(|(idx, contrib)| {
-            let is_selected = is_active && idx == selected_row;
-            let is_highlighted = highlighted_block == Some(contrib.block_number);
-            let is_safe = contrib.block_number <= safe_block;
-
-            let style = if is_selected {
-                Style::default().fg(Color::White).bg(Color::Rgb(60, 60, 80))
-            } else if is_highlighted {
-                Style::default().fg(Color::White).bg(Color::Rgb(40, 40, 60))
-            } else {
-                Style::default().fg(Color::White)
-            };
-
-            let block_style = if is_safe {
-                Style::default().fg(Color::DarkGray)
-            } else {
-                Style::default().fg(block_color(contrib.block_number))
-            };
-
-            Row::new(vec![
-                Cell::from(contrib.block_number.to_string()).style(block_style),
-                Cell::from(format_bytes(contrib.da_bytes)),
-                Cell::from(format_duration(contrib.timestamp.elapsed())),
-            ])
-            .style(style)
-        })
-        .collect();
-
-    let widths = [Constraint::Length(10), Constraint::Length(8), Constraint::Min(6)];
-
-    let table = Table::new(rows, widths).header(header);
-    f.render_widget(table, inner);
-}
-
-pub(super) fn render_batches_table(
+pub fn render_batches_table(
     f: &mut Frame,
     area: Rect,
     batches: &VecDeque<BatchSubmission>,
@@ -482,7 +445,7 @@ pub(super) fn render_batches_table(
     has_op_node: bool,
     title: &str,
 ) {
-    let border_color = if is_active { Color::Rgb(100, 180, 255) } else { Color::DarkGray };
+    let border_color = if is_active { Color::Rgb(255, 100, 100) } else { Color::Red };
 
     let block = Block::default()
         .title(format!(" {title} "))
@@ -526,9 +489,9 @@ pub(super) fn render_batches_table(
             let is_highlighted = highlighted_batch_idx == Some(idx);
 
             let style = if is_selected {
-                Style::default().fg(Color::White).bg(Color::Rgb(60, 60, 80))
+                Style::default().fg(Color::White).bg(COLOR_ROW_SELECTED)
             } else if is_highlighted {
-                Style::default().fg(Color::White).bg(Color::Rgb(40, 40, 60))
+                Style::default().fg(Color::White).bg(COLOR_ROW_HIGHLIGHTED)
             } else {
                 Style::default().fg(Color::White)
             };
@@ -558,23 +521,120 @@ pub(super) fn render_batches_table(
     f.render_widget(table, inner);
 }
 
-pub(super) fn render_stats_line(
-    growth_rate: Option<f64>,
-    burn_rate: Option<f64>,
-    time_since_blob: Option<Duration>,
-) -> Line<'static> {
-    let growth = format_rate(growth_rate);
-    let burn = format_rate(burn_rate);
-    let since = time_since_blob.map(format_duration).unwrap_or_else(|| "-".to_string());
+pub fn render_da_backlog_bar(
+    f: &mut Frame,
+    area: Rect,
+    tracker: &DaTracker,
+    loading: Option<&LoadingState>,
+    loaded: bool,
+    highlighted_block: Option<u64>,
+) {
+    let block = Block::default()
+        .title(" DA Backlog ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(Color::DarkGray));
 
-    Line::from(vec![
-        Span::styled("Growth: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(growth, Style::default().fg(Color::Rgb(255, 180, 100))),
-        Span::raw("  "),
-        Span::styled("Burn: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(burn, Style::default().fg(Color::Rgb(100, 200, 100))),
-        Span::raw("  "),
-        Span::styled("Last batch: ", Style::default().fg(Color::DarkGray)),
-        Span::styled(since, Style::default().fg(Color::White)),
-    ])
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    if inner.width < 10 || inner.height < 1 {
+        return;
+    }
+
+    let bar_width = inner.width.saturating_sub(12) as usize;
+
+    if !loaded {
+        let (line1, line2) = match loading {
+            Some(ls) if ls.total_blocks > 0 => {
+                let pct = (ls.current_block as f64 / ls.total_blocks as f64 * 100.0) as u64;
+                let filled = (pct as usize * bar_width / 100).min(bar_width);
+                let bar = format!("{}{}", "█".repeat(filled), "░".repeat(bar_width - filled));
+                (
+                    Line::from(Span::styled(bar, Style::default().fg(Color::Cyan))),
+                    Line::from(Span::styled(
+                        format!(" Loading {}/{}", ls.current_block, ls.total_blocks),
+                        Style::default().fg(Color::Cyan),
+                    )),
+                )
+            }
+            _ => (
+                Line::from(Span::styled(
+                    "░".repeat(bar_width),
+                    Style::default().fg(Color::DarkGray),
+                )),
+                Line::from(Span::styled(" Loading...", Style::default().fg(Color::Yellow))),
+            ),
+        };
+        let para = Paragraph::new(vec![line1, line2]);
+        f.render_widget(para, inner);
+        return;
+    }
+
+    let backlog_blocks: Vec<_> = tracker
+        .block_contributions
+        .iter()
+        .filter(|c| c.block_number > tracker.safe_l2_block)
+        .collect();
+
+    if backlog_blocks.is_empty() || tracker.da_backlog_bytes == 0 {
+        let empty_bar = "░".repeat(bar_width);
+        let text = format!("{empty_bar} {:>8}", format_bytes(0));
+        let para = Paragraph::new(text).style(Style::default().fg(Color::DarkGray));
+        f.render_widget(para, inner);
+        return;
+    }
+
+    let total_backlog = tracker.da_backlog_bytes;
+    let mut spans: Vec<Span> = Vec::new();
+    let mut chars_used = 0usize;
+
+    for contrib in backlog_blocks.iter().rev() {
+        let color = block_color(contrib.block_number);
+        let is_highlighted = highlighted_block == Some(contrib.block_number);
+
+        let proportion = contrib.da_bytes as f64 / total_backlog as f64;
+        let char_count = ((proportion * bar_width as f64).round() as usize).max(1);
+        let char_count = char_count.min(bar_width - chars_used);
+
+        if char_count > 0 {
+            let (glyph, style) = if is_highlighted {
+                ("▒", Style::default().fg(Color::White).bg(color))
+            } else {
+                ("█", Style::default().fg(color))
+            };
+            spans.push(Span::styled(glyph.repeat(char_count), style));
+            chars_used += char_count;
+        }
+
+        if chars_used >= bar_width {
+            break;
+        }
+    }
+
+    if chars_used < bar_width {
+        spans.push(Span::styled(
+            "░".repeat(bar_width - chars_used),
+            Style::default().fg(Color::DarkGray),
+        ));
+    }
+
+    let backlog_color = backlog_size_color(total_backlog);
+    spans.push(Span::styled(
+        format!(" {:>8}", format_bytes(total_backlog)),
+        Style::default().fg(backlog_color).add_modifier(Modifier::BOLD),
+    ));
+
+    let line = Line::from(spans);
+    let para = Paragraph::new(line);
+    f.render_widget(para, inner);
+}
+
+pub fn time_diff_color(ms: i64) -> Color {
+    if (150..=250).contains(&ms) {
+        Color::Green
+    } else if (100..150).contains(&ms) || (250..300).contains(&ms) {
+        Color::Yellow
+    } else {
+        Color::Red
+    }
 }

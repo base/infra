@@ -2,9 +2,12 @@ use alloy_primitives::{Address, B256};
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types_eth::{BlockNumberOrTag, TransactionTrait};
 use anyhow::Result;
+use base_flashtypes::Flashblock;
+use futures_util::StreamExt;
 use serde::Deserialize;
 use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio_tungstenite::connect_async;
 
 use crate::config::ChainConfig;
 use crate::l1_client::fetch_system_config_params;
@@ -31,6 +34,52 @@ pub async fn fetch_sync_status(op_node_rpc: &str) -> Result<SyncStatus> {
     let provider = ProviderBuilder::new().connect(op_node_rpc).await?;
     let status: SyncStatus = provider.raw_request("optimism_syncStatus".into(), ()).await?;
     Ok(status)
+}
+
+pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) -> Result<()> {
+    let (ws_stream, _) = connect_async(&url).await?;
+    let (_, mut read) = ws_stream.split();
+
+    while let Some(msg) = read.next().await {
+        let msg = msg?;
+        if !msg.is_binary() && !msg.is_text() {
+            continue;
+        }
+        let fb = Flashblock::try_decode_message(msg.into_data())?;
+        if tx.send(fb).await.is_err() {
+            break;
+        }
+    }
+    Ok(())
+}
+
+pub struct TimestampedFlashblock {
+    pub flashblock: Flashblock,
+    pub received_at: chrono::DateTime<chrono::Local>,
+}
+
+pub async fn run_flashblock_ws_timestamped(
+    url: String,
+    tx: mpsc::Sender<TimestampedFlashblock>,
+) -> Result<()> {
+    let (ws_stream, _) = connect_async(&url).await?;
+    let (_, mut read) = ws_stream.split();
+
+    while let Some(msg) = read.next().await {
+        let msg = msg?;
+        if !msg.is_binary() && !msg.is_text() {
+            continue;
+        }
+        let fb = Flashblock::try_decode_message(msg.into_data())?;
+        let timestamped = TimestampedFlashblock {
+            flashblock: fb,
+            received_at: chrono::Local::now(),
+        };
+        if tx.send(timestamped).await.is_err() {
+            break;
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug, Clone)]
