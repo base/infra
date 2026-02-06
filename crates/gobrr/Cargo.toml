@@ -1,0 +1,32 @@
+[package]
+name = "gobrr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+rand = { workspace = true }
+url = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-provider = { workspace = true }
+alloy-network = { workspace = true }
+alloy-signer = { workspace = true }
+alloy-signer-local = { workspace = true }
+alloy-consensus = { workspace = true }
+alloy-rpc-types-eth = { workspace = true }
+alloy-rpc-client = { workspace = true }
+alloy-transport-http = { workspace = true }
+op-alloy-network = { workspace = true }

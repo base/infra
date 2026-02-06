@@ -1,0 +1,20 @@
+[package]
+name = "gobrr-bin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "gobrr"
+path = "main.rs"
+
+[dependencies]
+gobrr = { workspace = true }
+clap = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
