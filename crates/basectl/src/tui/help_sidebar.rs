@@ -21,10 +21,19 @@ impl HelpSidebar {
         let sidebar_width = SIDEBAR_WIDTH.min(area.width);
         let main_width = area.width.saturating_sub(sidebar_width);
 
-        let main_area = Rect { x: area.x, y: area.y, width: main_width, height: area.height };
+        let main_area = Rect {
+            x: area.x,
+            y: area.y,
+            width: main_width,
+            height: area.height,
+        };
 
-        let sidebar_area =
-            Rect { x: area.x + main_width, y: area.y, width: sidebar_width, height: area.height };
+        let sidebar_area = Rect {
+            x: area.x + main_width,
+            y: area.y,
+            width: sidebar_width,
+            height: area.height,
+        };
 
         (main_area, sidebar_area)
     }
@@ -37,7 +46,9 @@ impl HelpSidebar {
             lines.push(Line::from(vec![
                 Span::styled(
                     format!("  {:<6}", kb.key),
-                    Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::raw(kb.description),
             ]));

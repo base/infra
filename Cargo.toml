@@ -48,11 +48,12 @@ tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
 futures-util = "0.3"
 url = "2.5"
 ratatui = "0.29"
-crossterm = { version = "0.28", features = ["event-stream"] }
+crossterm = "0.28"
 chrono = "0.4"
 anyhow = "1.0"
 serde_yaml = "0.9"
 dirs = "6.0"
+arboard = "3.4"
 dotenvy = "0.15.7"
 async-trait = "0.1"
 tracing = "0.1"
@@ -67,7 +68,6 @@ cadence = "1.4"
 # alloy
 alloy-primitives = { version = "1.5.2", default-features = false, features = [
     "map-foldhash",
-    "serde",
 ] }
 alloy-genesis = { version = "1.5.2", default-features = false }
 alloy-eips = { version = "1.5.2", default-features = false }
@@ -90,6 +90,4 @@ op-alloy-consensus = { version = "0.22.0", default-features = false }
 
 # base
 base-flashtypes = { git = "https://github.com/base/base.git" }
-
-# internal
 basectl-cli = { path = "crates/basectl" }

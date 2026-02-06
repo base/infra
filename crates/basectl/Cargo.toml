@@ -27,3 +27,4 @@ url = { workspace = true }
 alloy-primitives = { workspace = true }
 alloy-sol-types = { workspace = true }
 alloy-contract = { workspace = true }
+arboard = { workspace = true }

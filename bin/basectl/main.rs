@@ -1,12 +1,11 @@
-use basectl_cli::{
-    commands::{
-        config::{ConfigCommand, default_view, run_config},
-        flashblocks::{FlashblocksCommand, default_subscribe, run_flashblocks},
-    },
-    config::ChainConfig,
-    tui::{HomeSelection, NavResult, run_homescreen},
-};
 use clap::{Parser, Subcommand};
+
+use basectl_cli::commands::command_center::run_command_center;
+use basectl_cli::commands::config::{ConfigCommand, run_config, default_view};
+use basectl_cli::commands::da::run_da_view;
+use basectl_cli::commands::flashblocks::{FlashblocksCommand, run_flashblocks, default_subscribe};
+use basectl_cli::config::ChainConfig;
+use basectl_cli::tui::{run_homescreen, HomeSelection};
 
 #[derive(Debug, Parser)]
 #[command(name = "basectl")]
@@ -34,6 +33,9 @@ enum Commands {
         #[command(subcommand)]
         command: FlashblocksCommand,
     },
+    /// DA (Data Availability) backlog monitor
+    #[command(visible_alias = "d")]
+    Da,
 }
 
 #[tokio::main]
@@ -45,17 +47,14 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Some(Commands::Config { command }) => run_config(command, &chain_config).await,
         Some(Commands::Flashblocks { command }) => run_flashblocks(command, &chain_config).await,
+        Some(Commands::Da) => run_da_view(&chain_config).await,
         None => {
-            // Show homescreen when no command provided
-            loop {
-                let next = match run_homescreen()? {
-                    HomeSelection::Config => default_view(&chain_config).await?,
-                    HomeSelection::Flashblocks => default_subscribe(&chain_config).await?,
-                    HomeSelection::Quit => return Ok(()),
-                };
-                if next == NavResult::Quit {
-                    return Ok(());
-                }
+            match run_homescreen()? {
+                HomeSelection::CommandCenter => run_command_center(&chain_config).await,
+                HomeSelection::Config => default_view(&chain_config).await,
+                HomeSelection::Da => run_da_view(&chain_config).await,
+                HomeSelection::Flashblocks => default_subscribe(&chain_config).await,
+                HomeSelection::Quit => Ok(()),
             }
         }
     }

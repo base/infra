@@ -29,10 +29,19 @@ impl AppFrame {
         let status_height = StatusBar::height();
         let main_height = area.height.saturating_sub(status_height);
 
-        let main_area = Rect { x: area.x, y: area.y, width: area.width, height: main_height };
+        let main_area = Rect {
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: main_height,
+        };
 
-        let status_bar =
-            Rect { x: area.x, y: area.y + main_height, width: area.width, height: status_height };
+        let status_bar = Rect {
+            x: area.x,
+            y: area.y + main_height,
+            width: area.width,
+            height: status_height,
+        };
 
         // Split main area for help sidebar if needed
         let (content, sidebar) = if show_help {
@@ -42,7 +51,11 @@ impl AppFrame {
             (main_area, None)
         };
 
-        AppLayout { content, sidebar, status_bar }
+        AppLayout {
+            content,
+            sidebar,
+            status_bar,
+        }
     }
 
     /// Renders the frame components (status bar and optional help sidebar).

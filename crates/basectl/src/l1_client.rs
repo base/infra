@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use alloy_primitives::{Address, U256};
-use alloy_provider::{ProviderBuilder, layers::CallBatchLayer};
+use alloy_provider::{layers::CallBatchLayer, ProviderBuilder};
 use alloy_sol_types::sol;
 use anyhow::Result;
 
@@ -57,9 +57,17 @@ pub async fn fetch_system_config_params(
     let gas_limit = contract.gasLimit().call().await?;
 
     // Try to fetch elasticity - may fail on older SystemConfig versions
-    let elasticity = contract.eip1559Elasticity().call().await.ok().map(|r| r as u64);
+    let elasticity = contract
+        .eip1559Elasticity()
+        .call()
+        .await
+        .ok()
+        .map(|r| r as u64);
 
-    Ok(SystemConfigParams { gas_limit, elasticity })
+    Ok(SystemConfigParams {
+        gas_limit,
+        elasticity,
+    })
 }
 
 /// Fetch all available `SystemConfig` values from the L1 contract.

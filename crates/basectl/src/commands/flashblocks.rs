@@ -1,27 +1,31 @@
-use std::{collections::VecDeque, io::Stdout};
+use std::collections::VecDeque;
+use std::io::Stdout;
+use std::time::Duration;
 
 use anyhow::Result;
+use arboard::Clipboard;
 use base_flashtypes::Flashblock;
-use chrono::{DateTime, Local};
+use chrono::Local;
 use clap::{Args, Subcommand};
-use crossterm::event::{Event, EventStream, KeyCode, KeyEventKind, KeyModifiers};
+use crossterm::event::{self, Event, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt;
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Cell, Row, Table, TableState},
 };
+
+use super::common::{build_gas_bar, FlashblockEntry};
+use crate::config::ChainConfig;
+use crate::rpc::{fetch_chain_params, ChainParams};
+use crate::tui::{restore_terminal, setup_terminal, AppFrame, Keybinding};
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 
-use crate::{
-    config::ChainConfig,
-    rpc::{ChainParams, fetch_chain_params},
-    tui::{AppFrame, Keybinding, NavResult, restore_terminal, setup_terminal},
-};
-
 const MAX_FLASHBLOCKS: usize = 10_000;
+const GAS_BAR_CHARS: usize = 40;
 
 const KEYBINDINGS: &[Keybinding] = &[
+    Keybinding::new("q", "Quit"),
     Keybinding::new("?", "Toggle help"),
     Keybinding::new("Space", "Pause/Resume"),
     Keybinding::new("Up/k", "Scroll up"),
@@ -30,8 +34,6 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding::new("PgDn", "Page down"),
     Keybinding::new("Home/g", "Top (auto-scroll)"),
     Keybinding::new("End/G", "Bottom"),
-    Keybinding::new("h", "Home"),
-    Keybinding::new("q", "Quit"),
 ];
 
 #[derive(Debug, Subcommand)]
@@ -59,32 +61,12 @@ pub async fn run_flashblocks(command: FlashblocksCommand, config: &ChainConfig) 
 }
 
 /// Run the default flashblocks subscribe with TUI mode (called from homescreen)
-pub async fn default_subscribe(config: &ChainConfig) -> Result<NavResult> {
-    let mut terminal = setup_terminal()?;
-    let params = match fetch_chain_params(config).await {
-        Ok(params) => params,
-        Err(e) => {
-            restore_terminal(&mut terminal)?;
-            return Err(e);
-        }
-    };
-    let result =
-        run_tui_loop(&mut terminal, config.flashblocks_ws.as_str(), &config.name, params).await;
-    restore_terminal(&mut terminal)?;
-    result
+pub async fn default_subscribe(config: &ChainConfig) -> Result<()> {
+    let params = fetch_chain_params(config).await?;
+    run_tui_mode(config.flashblocks_ws.as_str(), &config.name, params).await
 }
 
-struct FlashblockEntry {
-    block_number: u64,
-    index: u64,
-    tx_count: usize,
-    gas_used: u64,
-    gas_limit: u64,
-    base_fee: Option<u128>,
-    prev_base_fee: Option<u128>,
-    timestamp: DateTime<Local>,
-    time_diff_ms: Option<i64>,
-}
+
 
 struct AppState {
     chain_name: String,
@@ -121,22 +103,20 @@ impl AppState {
         let block_number = fb.metadata.block_number;
         let now = Local::now();
 
-        // Extract base fee from base payload (present in FB#0)
-        let base_fee =
-            fb.base.as_ref().map(|base| base.base_fee_per_gas.try_into().unwrap_or(u128::MAX));
+        let base_fee = fb.base.as_ref().map(|base| {
+            base.base_fee_per_gas.try_into().unwrap_or(u128::MAX)
+        });
 
-        // Capture previous base fee before updating
         let prev_base_fee = self.current_base_fee;
 
-        // Update gas limit and base fee from base payload (present in FB#0)
         if let Some(ref base) = fb.base {
             self.current_gas_limit = base.gas_limit;
             self.current_base_fee = base_fee;
         }
 
-        // Calculate time diff from previous flashblock
-        let time_diff_ms =
-            self.flashblocks.front().map(|prev| (now - prev.timestamp).num_milliseconds());
+        let time_diff_ms = self.flashblocks.front().map(|prev| {
+            (now - prev.timestamp).num_milliseconds()
+        });
 
         let entry = FlashblockEntry {
             block_number,
@@ -210,24 +190,30 @@ impl AppState {
 
     fn maintain_scroll_on_new_data(&mut self) {
         if self.auto_scroll {
-            // Keep at top when auto-scrolling
             self.table_state.select(Some(0));
         } else if let Some(selected) = self.table_state.selected() {
-            // When not auto-scrolling, increment selection to stay on same row
-            // as new data pushes existing rows down
             let max = self.flashblocks.len().saturating_sub(1);
             self.table_state.select(Some((selected + 1).min(max)));
         }
     }
+
+    fn selected_block_number(&self) -> Option<u64> {
+        self.table_state
+            .selected()
+            .and_then(|idx| self.flashblocks.get(idx))
+            .map(|fb| fb.block_number)
+    }
 }
 
 async fn run_subscribe(args: SubscribeArgs, config: &ChainConfig) -> Result<()> {
-    let ws_url = args.websocket.as_deref().unwrap_or(config.flashblocks_ws.as_str());
+    let ws_url = args
+        .websocket
+        .as_deref()
+        .unwrap_or(config.flashblocks_ws.as_str());
 
     if args.json {
         run_json_mode(ws_url).await
     } else {
-        // Fetch chain params from L1 SystemConfig (with L2 fallback for elasticity)
         let params = fetch_chain_params(config).await?;
         run_tui_mode(ws_url, &config.name, params).await
     }
@@ -264,9 +250,9 @@ async fn run_json_mode(url: &str) -> Result<()> {
 
 async fn run_tui_mode(url: &str, chain_name: &str, params: ChainParams) -> Result<()> {
     let mut terminal = setup_terminal()?;
-    let _ = run_tui_loop(&mut terminal, url, chain_name, params).await?;
+    let result = run_tui_loop(&mut terminal, url, chain_name, params).await;
     restore_terminal(&mut terminal)?;
-    Ok(())
+    result
 }
 
 async fn run_ws_connection(url: String, tx: mpsc::Sender<Flashblock>) -> Result<()> {
@@ -291,10 +277,10 @@ async fn run_tui_loop(
     url: &str,
     chain_name: &str,
     params: ChainParams,
-) -> Result<NavResult> {
+) -> Result<()> {
     let (tx, mut rx) = mpsc::channel::<Flashblock>(100);
+
     let mut state = AppState::new(chain_name.to_string(), params);
-    let mut events = EventStream::new();
 
     let ws_url = url.to_string();
     tokio::spawn(async move {
@@ -305,64 +291,69 @@ async fn run_tui_loop(
 
     loop {
         let content_height = terminal.size()?.height.saturating_sub(5) as usize;
+
         terminal.draw(|f| draw_ui(f, &mut state))?;
 
-        tokio::select! {
-            Some(Ok(Event::Key(key))) = events.next() => {
-                if key.kind != KeyEventKind::Press {
-                    continue;
+        if event::poll(Duration::from_millis(100))?
+            && let Event::Key(key) = event::read()?
+                && key.kind == KeyEventKind::Press {
+                    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+                        break;
+                    }
+                    match key.code {
+                        KeyCode::Char('q') => break,
+                        KeyCode::Char('?') => state.show_help = !state.show_help,
+                        KeyCode::Char(' ') => state.paused = !state.paused,
+                        KeyCode::Up | KeyCode::Char('k') => state.scroll_up(),
+                        KeyCode::Down | KeyCode::Char('j') => state.scroll_down(),
+                        KeyCode::PageUp => state.page_up(content_height),
+                        KeyCode::PageDown => state.page_down(content_height),
+                        KeyCode::Home | KeyCode::Char('g') => state.scroll_to_top(),
+                        KeyCode::End | KeyCode::Char('G') => state.scroll_to_bottom(),
+                        KeyCode::Char('y') => {
+                            if let Some(block_num) = state.selected_block_number() {
+                                if let Ok(mut clipboard) = Clipboard::new() {
+                                    let _ = clipboard.set_text(block_num.to_string());
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
                 }
-                if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
-                    return Ok(NavResult::Quit);
-                }
-                match key.code {
-                    KeyCode::Char('q') => return Ok(NavResult::Quit),
-                    KeyCode::Char('h') => return Ok(NavResult::Home),
-                    KeyCode::Char('?') => state.show_help = !state.show_help,
-                    KeyCode::Char(' ') => state.paused = !state.paused,
-                    KeyCode::Up | KeyCode::Char('k') => state.scroll_up(),
-                    KeyCode::Down | KeyCode::Char('j') => state.scroll_down(),
-                    KeyCode::PageUp => state.page_up(content_height),
-                    KeyCode::PageDown => state.page_down(content_height),
-                    KeyCode::Home | KeyCode::Char('g') => state.scroll_to_top(),
-                    KeyCode::End | KeyCode::Char('G') => state.scroll_to_bottom(),
-                    _ => {}
-                }
-            }
-            Some(fb) = rx.recv() => {
-                if !state.paused {
-                    state.add_flashblock(fb);
-                }
+
+        while let Ok(fb) = rx.try_recv() {
+            if !state.paused {
+                state.add_flashblock(fb);
             }
         }
     }
+
+    Ok(())
 }
 
 fn draw_ui(f: &mut Frame, state: &mut AppState) {
     let layout = AppFrame::split_layout(f.area(), state.show_help);
     draw_table(f, layout.content, state);
-    AppFrame::render(f, &layout, &state.chain_name, KEYBINDINGS, None);
+
+    AppFrame::render(
+        f,
+        &layout,
+        &state.chain_name,
+        KEYBINDINGS,
+        None,
+    );
 }
 
-// Bar uses eighth-blocks for fine granularity (8 levels per character)
-const BAR_CHARS: usize = 40;
-const BAR_UNITS: usize = BAR_CHARS * 8;
-
-// Unicode eighth blocks: ▏▎▍▌▋▊▉█ (1/8 to 8/8)
-const EIGHTH_BLOCKS: [char; 8] = ['▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
-
 fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
-    let header_cells =
-        ["Block", "FB#", "Txns", "Gas Used", "Base Fee", "Delta", "Gas Fill", "Time"].iter().map(
-            |h| {
-                Cell::from(*h)
-                    .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-            },
-        );
+    let header_cells = ["Block", "FB#", "Txns", "Gas Used", "Base Fee", "Delta", "Gas Fill", "Time"]
+        .iter()
+        .map(|h| Cell::from(*h).style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)));
     let header = Row::new(header_cells).height(1);
 
-    let rows = state.flashblocks.iter().map(|fb| {
-        // Time delta with color: 150-250ms green, 100-150ms or 250-300ms yellow, else red
+    let selected_block = state.selected_block_number();
+    let selected_idx = state.table_state.selected();
+
+    let rows: Vec<Row> = state.flashblocks.iter().enumerate().map(|(idx, fb)| {
         let delta_cell = fb.time_diff_ms.map_or_else(
             || Cell::from("-".to_string()),
             |ms| {
@@ -377,14 +368,18 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             },
         );
 
-        // Base fee only shown on FB#0, colored based on change direction
         let base_fee_cell = if fb.index == 0 {
-            let base_fee_str = fb.base_fee.map(format_gwei).unwrap_or_else(|| "-".to_string());
+            let base_fee_str = fb.base_fee
+                .map(format_gwei)
+                .unwrap_or_else(|| "-".to_string());
 
-            // Determine color based on change: green if up, red if down
             let style = match (fb.base_fee, fb.prev_base_fee) {
-                (Some(current), Some(prev)) if current > prev => Style::default().fg(Color::Green),
-                (Some(current), Some(prev)) if current < prev => Style::default().fg(Color::Red),
+                (Some(current), Some(prev)) if current > prev => {
+                    Style::default().fg(Color::Green)
+                }
+                (Some(current), Some(prev)) if current < prev => {
+                    Style::default().fg(Color::Red)
+                }
                 _ => Style::default(),
             };
             Cell::from(base_fee_str).style(style)
@@ -392,10 +387,22 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             Cell::from(String::new())
         };
 
-        // Build inline bar chart for gas
-        let gas_bar = build_gas_bar(fb.gas_used, fb.gas_limit, state.elasticity_multiplier);
+        let gas_bar = build_gas_bar(fb.gas_used, fb.gas_limit, state.elasticity_multiplier, GAS_BAR_CHARS);
 
-        let cells = [
+        let is_selected = selected_idx == Some(idx);
+        let is_same_block = selected_block == Some(fb.block_number) && !is_selected;
+
+        let row_style = if is_selected {
+            Style::default().bg(Color::Rgb(50, 50, 70))
+        } else if is_same_block {
+            Style::default().bg(Color::Rgb(35, 35, 50))
+        } else if fb.index == 0 {
+            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default()
+        };
+
+        Row::new([
             Cell::from(fb.block_number.to_string()),
             Cell::from(fb.index.to_string()),
             Cell::from(fb.tx_count.to_string()),
@@ -404,15 +411,9 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             delta_cell,
             Cell::from(gas_bar),
             Cell::from(fb.timestamp.format("%H:%M:%S%.3f").to_string()),
-        ];
-        let row = Row::new(cells);
-        // Highlight FB#0 - new block with deposit txn
-        if fb.index == 0 {
-            row.style(Style::default().fg(Color::Green).add_modifier(Modifier::BOLD))
-        } else {
-            row
-        }
-    });
+        ])
+        .style(row_style)
+    }).collect();
 
     let widths = [
         Constraint::Length(12),
@@ -421,11 +422,10 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
         Constraint::Length(10),
         Constraint::Length(12),
         Constraint::Length(9),
-        Constraint::Length(BAR_CHARS as u16),
+        Constraint::Length(GAS_BAR_CHARS as u16),
         Constraint::Min(14),
     ];
 
-    // Build title with status indicator
     let title = if state.paused {
         " Recent Flashblocks [PAUSED] ".to_string()
     } else if state.auto_scroll {
@@ -442,67 +442,11 @@ fn draw_table(f: &mut Frame, area: Rect, state: &mut AppState) {
             Block::default()
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(Color::DarkGray))
-                .title(title),
+                .title(title)
         )
-        .row_highlight_style(Style::default().bg(Color::Rgb(40, 40, 50)));
+        .row_highlight_style(Style::default().bg(Color::Rgb(50, 50, 70)));
 
     f.render_stateful_widget(table, area, &mut state.table_state);
-}
-
-fn build_gas_bar(gas_used: u64, gas_limit: u64, elasticity_multiplier: u64) -> Line<'static> {
-    if gas_limit == 0 {
-        return Line::from("-".to_string());
-    }
-
-    let limit = gas_limit;
-
-    // Gas target based on elasticity multiplier
-    let gas_target = limit / elasticity_multiplier;
-    let target_char = ((gas_target as f64 / limit as f64) * BAR_CHARS as f64).round() as usize;
-
-    // Calculate in eighth-block units
-    let filled_units = ((gas_used as f64 / limit as f64) * BAR_UNITS as f64).round() as usize;
-    let filled_units = filled_units.min(BAR_UNITS);
-
-    let fill_color = Color::Rgb(100, 180, 255); // Nice blue
-    let target_color = Color::Rgb(255, 200, 100); // Orange/yellow for target marker
-
-    let mut spans = Vec::new();
-
-    // Build character by character to insert target marker
-    let mut current_units = 0;
-    for char_idx in 0..BAR_CHARS {
-        let char_end_units = (char_idx + 1) * 8;
-        let is_target_char = char_idx == target_char;
-
-        if is_target_char {
-            // Target marker - always use thin line, with background showing fill status
-            if current_units >= filled_units {
-                // Empty at target
-                spans.push(Span::styled("│", Style::default().fg(target_color)));
-            } else {
-                // Filled at target - show line with filled background
-                spans.push(Span::styled("│", Style::default().fg(target_color).bg(fill_color)));
-            }
-        } else if current_units >= filled_units {
-            // Empty portion
-            spans.push(Span::styled(" ", Style::default()));
-        } else if char_end_units <= filled_units {
-            // Full block
-            spans.push(Span::styled("█", Style::default().fg(fill_color)));
-        } else {
-            // Partial block
-            let units_in_char = filled_units - current_units;
-            spans.push(Span::styled(
-                EIGHTH_BLOCKS[units_in_char - 1].to_string(),
-                Style::default().fg(fill_color),
-            ));
-        }
-
-        current_units = char_end_units;
-    }
-
-    Line::from(spans)
 }
 
 fn format_gas(gas: u64) -> String {
@@ -517,5 +461,9 @@ fn format_gas(gas: u64) -> String {
 
 fn format_gwei(wei: u128) -> String {
     let gwei = wei as f64 / 1_000_000_000.0;
-    if gwei >= 1.0 { format!("{gwei:.2} gwei") } else { format!("{gwei:.4} gwei") }
+    if gwei >= 1.0 {
+        format!("{gwei:.2} gwei")
+    } else {
+        format!("{gwei:.4} gwei")
+    }
 }
