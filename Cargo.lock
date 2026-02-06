@@ -1015,7 +1015,6 @@ dependencies = [
  "arboard",
  "base-flashtypes",
  "chrono",
- "clap",
  "crossterm",
  "dirs",
  "futures-util",
