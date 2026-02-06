@@ -1,7 +1,8 @@
+use basectl_cli::{
+    app::{ViewId, run_app, run_app_with_view},
+    config::ChainConfig,
+};
 use clap::{Parser, Subcommand};
-
-use basectl_cli::app::{run_app, run_app_with_view, ViewId};
-use basectl_cli::config::ChainConfig;
 
 #[derive(Debug, Parser)]
 #[command(name = "basectl")]

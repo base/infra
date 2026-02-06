@@ -17,12 +17,19 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "r", description: "Refresh config" },
 ];
 
+#[derive(Debug)]
 pub struct ConfigView {
     needs_refresh: bool,
 }
 
+impl Default for ConfigView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConfigView {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { needs_refresh: true }
     }
 }

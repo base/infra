@@ -12,6 +12,7 @@ use crate::{
 
 const MAX_FLASHBLOCKS: usize = 100;
 
+#[derive(Debug)]
 pub struct Resources {
     pub config: ChainConfig,
     pub da: DaState,
@@ -20,6 +21,7 @@ pub struct Resources {
     sys_config_rx: Option<mpsc::Receiver<FullSystemConfig>>,
 }
 
+#[derive(Debug)]
 pub struct DaState {
     pub tracker: DaTracker,
     pub loading: Option<LoadingState>,
@@ -33,6 +35,7 @@ pub struct DaState {
     blob_rx: Option<mpsc::Receiver<BlobSubmission>>,
 }
 
+#[derive(Debug)]
 pub struct FlashState {
     pub entries: VecDeque<FlashblockEntry>,
     pub current_block: Option<u64>,
@@ -64,11 +67,10 @@ impl Resources {
     }
 
     pub fn poll_sys_config(&mut self) {
-        if let Some(ref mut rx) = self.sys_config_rx {
-            if let Ok(cfg) = rx.try_recv() {
+        if let Some(ref mut rx) = self.sys_config_rx
+            && let Ok(cfg) = rx.try_recv() {
                 self.system_config = Some(cfg);
             }
-        }
     }
 }
 
@@ -208,6 +210,12 @@ impl DaState {
             }
             self.tracker.growth_tracker.add_sample(da_bytes);
         }
+    }
+}
+
+impl Default for FlashState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -4,14 +4,14 @@ use anyhow::Result;
 use base_flashtypes::Flashblock;
 use tokio::sync::mpsc;
 
-use super::{views::create_view, App, Resources, ViewId};
+use super::{App, Resources, ViewId, views::create_view};
 use crate::{
     config::ChainConfig,
-    l1_client::{fetch_full_system_config, FullSystemConfig},
+    l1_client::{FullSystemConfig, fetch_full_system_config},
     rpc::{
+        BacklogFetchResult, BlobSubmission, BlockDaInfo, TimestampedFlashblock,
         fetch_initial_backlog_with_progress, fetch_sync_status, run_block_fetcher,
         run_flashblock_ws, run_flashblock_ws_timestamped, run_l1_batcher_watcher,
-        BacklogFetchResult, BlobSubmission, BlockDaInfo, TimestampedFlashblock,
     },
 };
 
@@ -43,9 +43,7 @@ fn start_background_services(config: &ChainConfig, resources: &mut Resources) {
     let (blob_tx, blob_rx) = mpsc::channel::<BlobSubmission>(100);
 
     resources.flash.set_channel(fb_rx);
-    resources
-        .da
-        .set_channels(da_fb_rx, sync_rx, backlog_rx, block_req_tx, block_res_rx, blob_rx);
+    resources.da.set_channels(da_fb_rx, sync_rx, backlog_rx, block_req_tx, block_res_rx, blob_rx);
 
     let ws_url = config.flashblocks_ws.to_string();
     let ws_url2 = config.flashblocks_ws.to_string();
@@ -84,11 +82,10 @@ fn start_background_services(config: &ChainConfig, resources: &mut Resources) {
             let mut interval = tokio::time::interval(Duration::from_secs(2));
             loop {
                 interval.tick().await;
-                if let Ok(status) = fetch_sync_status(&rpc_url).await {
-                    if sync_tx.send(status.safe_l2.number).await.is_err() {
+                if let Ok(status) = fetch_sync_status(&rpc_url).await
+                    && sync_tx.send(status.safe_l2.number).await.is_err() {
                         break;
                     }
-                }
             }
         });
     }

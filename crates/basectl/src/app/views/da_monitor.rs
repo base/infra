@@ -22,23 +22,30 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "Tab", description: "Next panel" },
 ];
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Panel {
     Blocks,
     Batches,
 }
 
+#[derive(Debug)]
 pub struct DaMonitorView {
     selected_panel: Panel,
     selected_row: usize,
 }
 
+impl Default for DaMonitorView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DaMonitorView {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { selected_panel: Panel::Blocks, selected_row: 0 }
     }
 
-    fn next_panel(&mut self) {
+    const fn next_panel(&mut self) {
         self.selected_panel = match self.selected_panel {
             Panel::Blocks => Panel::Batches,
             Panel::Batches => Panel::Blocks,

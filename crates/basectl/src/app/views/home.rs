@@ -64,12 +64,13 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "q", description: "Quit" },
 ];
 
+#[derive(Debug, Default)]
 pub struct HomeView {
     selected_index: usize,
 }
 
 impl HomeView {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self { selected_index: 0 }
     }
 }

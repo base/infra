@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use alloy_primitives::{Address, B256};
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types_eth::{BlockNumberOrTag, TransactionTrait};
@@ -5,12 +7,10 @@ use anyhow::Result;
 use base_flashtypes::Flashblock;
 use futures_util::StreamExt;
 use serde::Deserialize;
-use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 
-use crate::config::ChainConfig;
-use crate::l1_client::fetch_system_config_params;
+use crate::{config::ChainConfig, l1_client::fetch_system_config_params};
 
 const DEFAULT_ELASTICITY: u64 = 6;
 
@@ -53,6 +53,7 @@ pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) -> Res
     Ok(())
 }
 
+#[derive(Debug)]
 pub struct TimestampedFlashblock {
     pub flashblock: Flashblock,
     pub received_at: chrono::DateTime<chrono::Local>,
@@ -71,10 +72,8 @@ pub async fn run_flashblock_ws_timestamped(
             continue;
         }
         let fb = Flashblock::try_decode_message(msg.into_data())?;
-        let timestamped = TimestampedFlashblock {
-            flashblock: fb,
-            received_at: chrono::Local::now(),
-        };
+        let timestamped =
+            TimestampedFlashblock { flashblock: fb, received_at: chrono::Local::now() };
         if tx.send(timestamped).await.is_err() {
             break;
         }
@@ -111,21 +110,15 @@ pub async fn fetch_initial_backlog(l2_rpc: &str, op_node_rpc: &str) -> Result<In
     let unsafe_block = status.unsafe_l2.number;
 
     if unsafe_block <= safe_block {
-        return Ok(InitialBacklog {
-            safe_block,
-            unsafe_block,
-            da_bytes: 0,
-        });
+        return Ok(InitialBacklog { safe_block, unsafe_block, da_bytes: 0 });
     }
 
     let provider = ProviderBuilder::new().connect(l2_rpc).await?;
     let mut total_da_bytes: u64 = 0;
 
     for block_num in (safe_block + 1)..=unsafe_block {
-        if let Ok(Some(block)) = provider
-            .get_block_by_number(BlockNumberOrTag::Number(block_num))
-            .full()
-            .await
+        if let Ok(Some(block)) =
+            provider.get_block_by_number(BlockNumberOrTag::Number(block_num)).full().await
         {
             for tx in block.transactions.txns() {
                 total_da_bytes = total_da_bytes.saturating_add(tx.inner.input().len() as u64);
@@ -133,11 +126,7 @@ pub async fn fetch_initial_backlog(l2_rpc: &str, op_node_rpc: &str) -> Result<In
         }
     }
 
-    Ok(InitialBacklog {
-        safe_block,
-        unsafe_block,
-        da_bytes: total_da_bytes,
-    })
+    Ok(InitialBacklog { safe_block, unsafe_block, da_bytes: total_da_bytes })
 }
 
 /// Fetch initial backlog with progress updates via channel
@@ -152,11 +141,7 @@ pub async fn fetch_initial_backlog_with_progress(
         let unsafe_block = status.unsafe_l2.number;
 
         if unsafe_block <= safe_block {
-            return Ok(InitialBacklog {
-                safe_block,
-                unsafe_block,
-                da_bytes: 0,
-            });
+            return Ok(InitialBacklog { safe_block, unsafe_block, da_bytes: 0 });
         }
 
         let total_blocks = unsafe_block - safe_block;
@@ -164,10 +149,8 @@ pub async fn fetch_initial_backlog_with_progress(
         let mut total_da_bytes: u64 = 0;
 
         for (idx, block_num) in ((safe_block + 1)..=unsafe_block).enumerate() {
-            if let Ok(Some(block)) = provider
-                .get_block_by_number(BlockNumberOrTag::Number(block_num))
-                .full()
-                .await
+            if let Ok(Some(block)) =
+                provider.get_block_by_number(BlockNumberOrTag::Number(block_num)).full().await
             {
                 for tx in block.transactions.txns() {
                     total_da_bytes = total_da_bytes.saturating_add(tx.inner.input().len() as u64);
@@ -196,9 +179,7 @@ pub async fn fetch_initial_backlog_with_progress(
             let _ = progress_tx.send(BacklogFetchResult::Complete(backlog)).await;
         }
         Err(e) => {
-            let _ = progress_tx
-                .send(BacklogFetchResult::Error(e.to_string()))
-                .await;
+            let _ = progress_tx.send(BacklogFetchResult::Error(e.to_string())).await;
         }
     }
 }
@@ -222,16 +203,11 @@ pub async fn run_block_fetcher(
     };
 
     while let Some(block_num) = request_rx.recv().await {
-        if let Ok(Some(block)) = provider
-            .get_block_by_number(BlockNumberOrTag::Number(block_num))
-            .full()
-            .await
+        if let Ok(Some(block)) =
+            provider.get_block_by_number(BlockNumberOrTag::Number(block_num)).full().await
         {
-            let da_bytes: u64 = block
-                .transactions
-                .txns()
-                .map(|tx| tx.inner.input().len() as u64)
-                .sum();
+            let da_bytes: u64 =
+                block.transactions.txns().map(|tx| tx.inner.input().len() as u64).sum();
 
             let info = BlockDaInfo {
                 block_number: block_num,
@@ -260,17 +236,15 @@ pub struct ChainParams {
 /// If elasticity is not available on L1 (older `SystemConfig`), it falls back
 /// to fetching from L2 `extraData`.
 pub async fn fetch_chain_params(config: &ChainConfig) -> Result<ChainParams> {
-    let l1_params = fetch_system_config_params(config.l1_rpc.as_str(), config.system_config).await?;
+    let l1_params =
+        fetch_system_config_params(config.l1_rpc.as_str(), config.system_config).await?;
 
     let elasticity = match l1_params.elasticity {
         Some(e) => e,
         None => fetch_elasticity(config.rpc.as_str()).await?,
     };
 
-    Ok(ChainParams {
-        gas_limit: l1_params.gas_limit,
-        elasticity,
-    })
+    Ok(ChainParams { gas_limit: l1_params.gas_limit, elasticity })
 }
 
 /// Fetch the EIP-1559 elasticity multiplier from the L2 block extraData.
@@ -287,12 +261,8 @@ pub async fn fetch_elasticity(rpc_url: &str) -> Result<u64> {
 
     // Holocene format: version(1) + denominator(4) + elasticity(4) = 9 bytes
     if extra_data.len() >= 9 && extra_data[0] == 0 {
-        let elasticity = u32::from_be_bytes([
-            extra_data[5],
-            extra_data[6],
-            extra_data[7],
-            extra_data[8],
-        ]);
+        let elasticity =
+            u32::from_be_bytes([extra_data[5], extra_data[6], extra_data[7], extra_data[8]]);
         Ok(elasticity as u64)
     } else {
         // Pre-Holocene or invalid format, use default
@@ -331,15 +301,11 @@ pub async fn run_l1_batcher_watcher(
             Err(_) => continue,
         };
 
-        let start_block = last_block
-            .map(|b| b + 1)
-            .unwrap_or_else(|| latest.saturating_sub(5));
+        let start_block = last_block.map(|b| b + 1).unwrap_or_else(|| latest.saturating_sub(5));
 
         for block_num in start_block..=latest {
-            if let Ok(Some(block)) = provider
-                .get_block_by_number(BlockNumberOrTag::Number(block_num))
-                .full()
-                .await
+            if let Ok(Some(block)) =
+                provider.get_block_by_number(BlockNumberOrTag::Number(block_num)).full().await
             {
                 let block_hash = block.header.hash;
                 for tx in block.transactions.txns() {

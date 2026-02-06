@@ -5,9 +5,12 @@ use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::prelude::*;
 
 use super::{Action, Resources, Router, View, ViewId};
-use crate::commands::common::EVENT_POLL_TIMEOUT;
-use crate::tui::{restore_terminal, setup_terminal, AppFrame};
+use crate::{
+    commands::common::EVENT_POLL_TIMEOUT,
+    tui::{AppFrame, restore_terminal, setup_terminal},
+};
 
+#[derive(Debug)]
 pub struct App {
     router: Router,
     resources: Resources,
@@ -15,12 +18,8 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(resources: Resources, initial_view: ViewId) -> Self {
-        Self {
-            router: Router::new(initial_view),
-            resources,
-            show_help: false,
-        }
+    pub const fn new(resources: Resources, initial_view: ViewId) -> Self {
+        Self { router: Router::new(initial_view), resources, show_help: false }
     }
 
     pub async fn run<F>(mut self, mut view_factory: F) -> Result<()>
@@ -65,9 +64,11 @@ impl App {
                 );
             })?;
 
-            if event::poll(EVENT_POLL_TIMEOUT)? {
-                if let Event::Key(key) = event::read()? {
-                    if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            if event::poll(EVENT_POLL_TIMEOUT)?
+                && let Event::Key(key) = event::read()? {
+                    if key.code == KeyCode::Char('c')
+                        && key.modifiers.contains(KeyModifiers::CONTROL)
+                    {
                         break;
                     }
 
@@ -91,7 +92,6 @@ impl App {
                         break;
                     }
                 }
-            }
         }
 
         Ok(())
@@ -115,18 +115,6 @@ impl App {
                 self.show_help = false;
                 false
             }
-            Action::Back => {
-                if self.router.back() {
-                    *current_view = view_factory(self.router.current());
-                    self.show_help = false;
-                }
-                false
-            }
-            Action::ToggleHelp => {
-                self.show_help = !self.show_help;
-                false
-            }
-            Action::SetFocus(_) => false,
         }
     }
 }

@@ -75,7 +75,7 @@ pub const RATE_WINDOW_5M: Duration = Duration::from_secs(300);
 // Shared Data Types
 // =============================================================================
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FlashblockEntry {
     pub block_number: u64,
     pub index: u64,
@@ -88,14 +88,14 @@ pub struct FlashblockEntry {
     pub time_diff_ms: Option<i64>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BlockContribution {
     pub block_number: u64,
     pub da_bytes: u64,
     pub timestamp: Instant,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BatchSubmission {
     pub da_bytes: u64,
     pub estimated_blobs: u64,
@@ -123,14 +123,14 @@ impl BatchSubmission {
         }
     }
 
-    pub fn record_l1_submission(&mut self, blob_sub: &BlobSubmission) {
+    pub const fn record_l1_submission(&mut self, blob_sub: &BlobSubmission) {
         self.actual_blobs = Some(blob_sub.blob_count);
         self.l1_blob_bytes = Some(blob_sub.l1_blob_bytes);
         self.l1_block_number = Some(blob_sub.block_number);
         self.l1_block_hash = Some(blob_sub.block_hash);
     }
 
-    pub fn has_l1_data(&self) -> bool {
+    pub const fn has_l1_data(&self) -> bool {
         self.actual_blobs.is_some()
     }
 
@@ -154,8 +154,15 @@ impl BatchSubmission {
     }
 }
 
+#[derive(Debug)]
 pub struct RateTracker {
     samples: VecDeque<(Instant, u64)>,
+}
+
+impl Default for RateTracker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RateTracker {
@@ -187,6 +194,7 @@ impl RateTracker {
     }
 }
 
+#[derive(Debug)]
 pub struct LoadingState {
     pub current_block: u64,
     pub total_blocks: u64,
@@ -196,6 +204,7 @@ pub struct LoadingState {
 // DA Tracker - Shared State Management for DA Monitoring
 // =============================================================================
 
+#[derive(Debug)]
 pub struct DaTracker {
     pub safe_l2_block: u64,
     pub da_backlog_bytes: u64,
@@ -204,6 +213,12 @@ pub struct DaTracker {
     pub growth_tracker: RateTracker,
     pub burn_tracker: RateTracker,
     pub last_blob_time: Option<Instant>,
+}
+
+impl Default for DaTracker {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DaTracker {
@@ -219,7 +234,7 @@ impl DaTracker {
         }
     }
 
-    pub fn set_initial_backlog(&mut self, safe_block: u64, da_bytes: u64) {
+    pub const fn set_initial_backlog(&mut self, safe_block: u64, da_bytes: u64) {
         self.safe_l2_block = safe_block;
         self.da_backlog_bytes = da_bytes;
     }
@@ -302,12 +317,6 @@ impl DaTracker {
         {
             submission.record_l1_submission(blob_sub);
         }
-    }
-
-    pub fn find_batch_for_block(&self, block_number: u64) -> Option<usize> {
-        self.batch_submissions
-            .iter()
-            .position(|b| block_number >= b.block_range.0 && block_number <= b.block_range.1)
     }
 }
 

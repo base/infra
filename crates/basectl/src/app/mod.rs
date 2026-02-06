@@ -1,6 +1,5 @@
 mod action;
 mod app;
-mod component;
 mod resources;
 mod router;
 mod runner;
@@ -9,7 +8,6 @@ pub mod views;
 
 pub use action::Action;
 pub use app::App;
-pub use component::Component;
 pub use resources::{DaState, FlashState, Resources};
 pub use router::{Router, ViewId};
 pub use runner::{run_app, run_app_with_view};

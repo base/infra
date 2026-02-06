@@ -7,17 +7,18 @@ pub enum ViewId {
     Config,
 }
 
+#[derive(Debug)]
 pub struct Router {
     current: ViewId,
     history: Vec<ViewId>,
 }
 
 impl Router {
-    pub fn new(initial: ViewId) -> Self {
+    pub const fn new(initial: ViewId) -> Self {
         Self { current: initial, history: Vec::new() }
     }
 
-    pub fn current(&self) -> ViewId {
+    pub const fn current(&self) -> ViewId {
         self.current
     }
 

@@ -30,9 +30,16 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "y", description: "Copy block number" },
 ];
 
+#[derive(Debug)]
 pub struct FlashblocksView {
     table_state: TableState,
     auto_scroll: bool,
+}
+
+impl Default for FlashblocksView {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl FlashblocksView {
@@ -104,13 +111,11 @@ impl View for FlashblocksView {
                 Action::None
             }
             KeyCode::Char('y') => {
-                if let Some(idx) = self.table_state.selected() {
-                    if let Some(entry) = resources.flash.entries.get(idx) {
-                        if let Ok(mut clipboard) = Clipboard::new() {
+                if let Some(idx) = self.table_state.selected()
+                    && let Some(entry) = resources.flash.entries.get(idx)
+                        && let Ok(mut clipboard) = Clipboard::new() {
                             let _ = clipboard.set_text(entry.block_number.to_string());
                         }
-                    }
-                }
                 Action::None
             }
             _ => Action::None,

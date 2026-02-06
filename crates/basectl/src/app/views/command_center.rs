@@ -25,13 +25,14 @@ const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "y", description: "Copy block number" },
 ];
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Panel {
     Flashblocks,
     Da,
     Batches,
 }
 
+#[derive(Debug)]
 pub struct CommandCenterView {
     focused_panel: Panel,
     da_selected_row: usize,
@@ -40,8 +41,14 @@ pub struct CommandCenterView {
     highlighted_block: Option<u64>,
 }
 
+impl Default for CommandCenterView {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CommandCenterView {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             focused_panel: Panel::Flashblocks,
             da_selected_row: 0,
@@ -51,7 +58,7 @@ impl CommandCenterView {
         }
     }
 
-    fn next_panel(&mut self) {
+    const fn next_panel(&mut self) {
         self.focused_panel = match self.focused_panel {
             Panel::Flashblocks => Panel::Da,
             Panel::Da => Panel::Batches,
@@ -59,7 +66,7 @@ impl CommandCenterView {
         };
     }
 
-    fn prev_panel(&mut self) {
+    const fn prev_panel(&mut self) {
         self.focused_panel = match self.focused_panel {
             Panel::Flashblocks => Panel::Batches,
             Panel::Da => Panel::Flashblocks,
@@ -187,11 +194,10 @@ impl View for CommandCenterView {
                 Action::None
             }
             KeyCode::Char('y') => {
-                if let Some(block_num) = self.get_copyable_block(resources) {
-                    if let Ok(mut clipboard) = Clipboard::new() {
+                if let Some(block_num) = self.get_copyable_block(resources)
+                    && let Ok(mut clipboard) = Clipboard::new() {
                         let _ = clipboard.set_text(block_num);
                     }
-                }
                 Action::None
             }
             _ => Action::None,
@@ -302,7 +308,7 @@ fn render_config_panel(f: &mut Frame, area: Rect, resources: &Resources) {
                     Span::raw("  "),
                     Span::styled("E/D: ", Style::default().fg(Color::DarkGray)),
                     Span::styled(
-                        format!("{}/{}", elasticity, denominator),
+                        format!("{elasticity}/{denominator}"),
                         Style::default().fg(Color::Cyan),
                     ),
                 ]),
