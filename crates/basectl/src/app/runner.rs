@@ -1,10 +1,10 @@
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use anyhow::Result;
 use base_flashtypes::Flashblock;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
-use super::{App, Resources, ViewId, views::create_view};
+use super::{App, Resources, ViewId, resources::LoadTestSetup, views::create_view};
 use crate::{
     config::ChainConfig,
     l1_client::{FullSystemConfig, fetch_full_system_config},
@@ -15,15 +15,6 @@ use crate::{
     },
 };
 
-pub async fn run_app(config: ChainConfig) -> Result<()> {
-    let mut resources = Resources::new(config.clone());
-
-    start_background_services(&config, &mut resources);
-
-    let app = App::new(resources, ViewId::Home);
-    app.run(create_view).await
-}
-
 pub async fn run_app_with_view(config: ChainConfig, initial_view: ViewId) -> Result<()> {
     let mut resources = Resources::new(config.clone());
 
@@ -31,6 +22,44 @@ pub async fn run_app_with_view(config: ChainConfig, initial_view: ViewId) -> Res
 
     let app = App::new(resources, initial_view);
     app.run(create_view).await
+}
+
+/// Run load test with TUI dashboard.
+/// Pre-populates the setup state so the `LoadTestView` transitions through
+/// Starting → Dashboard automatically.
+pub async fn run_loadtest_tui(config: ChainConfig, file: String) -> Result<()> {
+    let mut resources = Resources::new(config.clone());
+    start_background_services(&config, &mut resources);
+
+    // Use the same async setup path as the TUI-initiated flow
+    spawn_loadtest_setup(&mut resources, PathBuf::from(&file));
+
+    let app = App::new(resources, ViewId::LoadTest);
+    app.run(create_view).await
+}
+
+/// Spawn an async task that calls `gobrr::start_load_test` and stores the
+/// result receiver in `resources.loadtest_setup`.
+pub(super) fn spawn_loadtest_setup(resources: &mut Resources, config_path: PathBuf) {
+    let (tx, rx) = oneshot::channel();
+    let config_str = config_path.display().to_string();
+
+    tokio::spawn(async move {
+        let result = gobrr::start_load_test(&config_str).await;
+        let _ = tx.send(result);
+    });
+
+    resources.loadtest_setup = Some(LoadTestSetup::Starting { config_path, result_rx: rx });
+}
+
+/// Given a successful `LoadTestHandle`, activate the load test via gobrr's
+/// orchestrator and store the resulting state.
+pub(super) fn activate_loadtest(
+    resources: &mut Resources,
+    handle: gobrr::LoadTestHandle,
+    config_file: String,
+) {
+    resources.loadtest = Some(gobrr::activate(handle, config_file));
 }
 
 fn start_background_services(config: &ChainConfig, resources: &mut Resources) {

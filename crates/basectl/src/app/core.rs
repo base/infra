@@ -3,8 +3,9 @@ use std::io::Stdout;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyModifiers};
 use ratatui::prelude::*;
+use tokio::sync::oneshot;
 
-use super::{Action, Resources, Router, View, ViewId};
+use super::{Action, Resources, Router, View, ViewId, resources::LoadTestSetup, runner};
 use crate::{
     commands::common::EVENT_POLL_TIMEOUT,
     tui::{AppFrame, restore_terminal, setup_terminal},
@@ -46,6 +47,11 @@ impl App {
             self.resources.da.poll();
             self.resources.flash.poll();
             self.resources.poll_sys_config();
+            if let Some(ref mut lt) = self.resources.loadtest {
+                lt.poll();
+            }
+
+            self.poll_loadtest_setup();
 
             let action = current_view.tick(&mut self.resources);
             if self.handle_action(action, &mut current_view, view_factory) {
@@ -95,6 +101,34 @@ impl App {
         Ok(())
     }
 
+    fn poll_loadtest_setup(&mut self) {
+        match self.resources.loadtest_setup.take() {
+            Some(LoadTestSetup::Starting { config_path, mut result_rx }) => {
+                match result_rx.try_recv() {
+                    Ok(Ok(handle)) => {
+                        let config_file = config_path.display().to_string();
+                        runner::activate_loadtest(&mut self.resources, handle, config_file);
+                    }
+                    Ok(Err(e)) => {
+                        self.resources.loadtest_setup =
+                            Some(LoadTestSetup::Failed { config_path, error: format!("{e:#}") });
+                    }
+                    Err(oneshot::error::TryRecvError::Empty) => {
+                        self.resources.loadtest_setup =
+                            Some(LoadTestSetup::Starting { config_path, result_rx });
+                    }
+                    Err(oneshot::error::TryRecvError::Closed) => {
+                        self.resources.loadtest_setup = Some(LoadTestSetup::Failed {
+                            config_path,
+                            error: "Setup task panicked".to_string(),
+                        });
+                    }
+                }
+            }
+            other => self.resources.loadtest_setup = other,
+        }
+    }
+
     fn handle_action<F>(
         &mut self,
         action: Action,
@@ -111,6 +145,10 @@ impl App {
                 self.router.switch_to(view_id);
                 *current_view = view_factory(view_id);
                 self.show_help = false;
+                false
+            }
+            Action::StartLoadTest(path) => {
+                runner::spawn_loadtest_setup(&mut self.resources, path);
                 false
             }
         }

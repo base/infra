@@ -1,7 +1,7 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, path::PathBuf};
 
 use base_flashtypes::Flashblock;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 use crate::{
     commands::common::{DaTracker, FlashblockEntry, LoadingState},
@@ -19,6 +19,20 @@ pub struct Resources {
     pub flash: FlashState,
     pub system_config: Option<FullSystemConfig>,
     sys_config_rx: Option<mpsc::Receiver<FullSystemConfig>>,
+    pub loadtest: Option<gobrr::LoadTestState>,
+    pub loadtest_setup: Option<LoadTestSetup>,
+}
+
+#[derive(Debug)]
+pub enum LoadTestSetup {
+    Starting {
+        config_path: PathBuf,
+        result_rx: oneshot::Receiver<anyhow::Result<gobrr::LoadTestHandle>>,
+    },
+    Failed {
+        config_path: PathBuf,
+        error: String,
+    },
 }
 
 #[derive(Debug)]
@@ -55,6 +69,8 @@ impl Resources {
             flash: FlashState::new(),
             system_config: None,
             sys_config_rx: None,
+            loadtest: None,
+            loadtest_setup: None,
         }
     }
 
