@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, path::PathBuf, time::Duration};
+use std::{collections::VecDeque, path::PathBuf};
 
 use base_flashtypes::Flashblock;
 use tokio::sync::{mpsc, oneshot};
@@ -19,43 +19,8 @@ pub struct Resources {
     pub flash: FlashState,
     pub system_config: Option<FullSystemConfig>,
     sys_config_rx: Option<mpsc::Receiver<FullSystemConfig>>,
-    pub loadtest: Option<LoadTestState>,
+    pub loadtest: Option<gobrr::LoadTestState>,
     pub loadtest_setup: Option<LoadTestSetup>,
-}
-
-#[derive(Debug, Clone)]
-pub struct TxpoolHostStatus {
-    pub host: String,
-    pub pending: u64,
-    pub queued: u64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum LoadTestPhase {
-    Starting,
-    Running,
-    Draining,
-    Complete,
-}
-
-impl std::fmt::Display for LoadTestPhase {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Starting => write!(f, "Starting"),
-            Self::Running => write!(f, "Running"),
-            Self::Draining => write!(f, "Draining"),
-            Self::Complete => write!(f, "Complete"),
-        }
-    }
-}
-
-/// Channels for receiving loadtest updates from background tasks.
-#[derive(Debug)]
-pub struct LoadTestChannels {
-    pub stats_rx: mpsc::Receiver<gobrr::Stats>,
-    pub txpool_rx: mpsc::Receiver<Vec<TxpoolHostStatus>>,
-    pub phase_rx: mpsc::Receiver<LoadTestPhase>,
-    pub shutdown_tx: oneshot::Sender<()>,
 }
 
 #[derive(Debug)]
@@ -68,68 +33,6 @@ pub enum LoadTestSetup {
         config_path: PathBuf,
         error: String,
     },
-}
-
-#[derive(Debug)]
-pub struct LoadTestState {
-    pub stats: Option<gobrr::Stats>,
-    stats_rx: Option<mpsc::Receiver<gobrr::Stats>>,
-    pub txpool_status: Vec<TxpoolHostStatus>,
-    txpool_rx: Option<mpsc::Receiver<Vec<TxpoolHostStatus>>>,
-    pub phase: LoadTestPhase,
-    phase_rx: Option<mpsc::Receiver<LoadTestPhase>>,
-    pub shutdown_tx: Option<oneshot::Sender<()>>,
-    pub management_hosts: Vec<String>,
-    pub target_tps: Option<u32>,
-    pub duration: Option<Duration>,
-    pub config_file: String,
-}
-
-impl LoadTestState {
-    pub fn new(
-        channels: LoadTestChannels,
-        management_hosts: Vec<String>,
-        target_tps: Option<u32>,
-        duration: Option<Duration>,
-        config_file: String,
-    ) -> Self {
-        Self {
-            stats: None,
-            stats_rx: Some(channels.stats_rx),
-            txpool_status: Vec::new(),
-            txpool_rx: Some(channels.txpool_rx),
-            phase: LoadTestPhase::Starting,
-            phase_rx: Some(channels.phase_rx),
-            shutdown_tx: Some(channels.shutdown_tx),
-            management_hosts,
-            target_tps,
-            duration,
-            config_file,
-        }
-    }
-
-    pub fn poll(&mut self) {
-        // Drain stats channel, keep latest
-        if let Some(ref mut rx) = self.stats_rx {
-            while let Ok(stats) = rx.try_recv() {
-                self.stats = Some(stats);
-            }
-        }
-
-        // Drain txpool channel, keep latest
-        if let Some(ref mut rx) = self.txpool_rx {
-            while let Ok(status) = rx.try_recv() {
-                self.txpool_status = status;
-            }
-        }
-
-        // Drain phase channel, keep latest
-        if let Some(ref mut rx) = self.phase_rx {
-            while let Ok(phase) = rx.try_recv() {
-                self.phase = phase;
-            }
-        }
-    }
 }
 
 #[derive(Debug)]

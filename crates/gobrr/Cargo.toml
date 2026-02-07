@@ -15,7 +15,7 @@ rand = { workspace = true }
 url = { workspace = true }
 reqwest = { workspace = true }
 alloy-primitives = { workspace = true }
-alloy-provider = { workspace = true }
+alloy-provider = { workspace = true, features = ["txpool-api"] }
 alloy-network = { workspace = true }
 alloy-signer = { workspace = true }
 alloy-signer-local = { workspace = true }

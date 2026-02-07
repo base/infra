@@ -19,7 +19,7 @@ anyhow = { workspace = true }
 serde = { workspace = true }
 serde_yaml = { workspace = true }
 dirs = { workspace = true }
-alloy-provider = { workspace = true, features = ["txpool-api"] }
+alloy-provider = { workspace = true }
 alloy-rpc-types-eth = { workspace = true }
 base-flashtypes = { workspace = true }
 url = { workspace = true }
@@ -28,8 +28,5 @@ alloy-sol-types = { workspace = true }
 alloy-contract = { workspace = true }
 arboard = { workspace = true }
 gobrr = { workspace = true }
-reqwest = { workspace = true }
 tracing = { workspace = true }
-alloy-transport-http = { workspace = true }
-alloy-rpc-client = { workspace = true }
 shellexpand = { workspace = true }

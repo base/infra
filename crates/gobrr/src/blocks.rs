@@ -1,4 +1,5 @@
-use alloy_primitives::B256;
+use std::time::Duration;
+
 use alloy_provider::Provider;
 use alloy_rpc_types_eth::BlockNumberOrTag;
 use anyhow::{Context, Result};
@@ -7,15 +8,11 @@ use tracing::{debug, info, warn};
 
 use crate::client::{self, Provider as OpProvider};
 
-/// Block event broadcast to consumers
-#[derive(Debug, Clone)]
-pub(crate) struct BlockEvent {
-    pub(crate) block_num: u64,
-    pub(crate) tx_hashes: Vec<B256>,
-    pub(crate) gas_used: u64,
-    pub(crate) gas_limit: u64,
-    pub(crate) base_fee_per_gas: Option<u64>,
-}
+/// An OP-stack block fetched from the RPC.
+pub(crate) type OpBlock = <op_alloy_network::Optimism as alloy_network::Network>::BlockResponse;
+
+/// How often the watcher tries to fetch the next block.
+const BLOCK_POLL_INTERVAL: Duration = Duration::from_millis(250);
 
 /// Watches for new blocks and broadcasts events to consumers
 pub(crate) struct BlockWatcher {
@@ -32,7 +29,7 @@ impl BlockWatcher {
     /// Runs the block watcher loop, broadcasting block events
     pub(crate) async fn run(
         self,
-        block_tx: broadcast::Sender<BlockEvent>,
+        block_tx: broadcast::Sender<OpBlock>,
         mut shutdown: broadcast::Receiver<()>,
     ) -> Result<()> {
         // Get the starting block number
@@ -48,20 +45,17 @@ impl BlockWatcher {
                     debug!("Block watcher shutting down");
                     break;
                 }
-                _ = tokio::time::sleep(std::time::Duration::from_millis(500)) => {
-                    // Poll for new blocks
-                    match self.provider.get_block_number().await {
-                        Ok(current_block) => {
-                            // Process any new blocks we haven't seen
-                            while last_block < current_block {
-                                last_block += 1;
-                                if let Err(e) = self.broadcast_block(last_block, &block_tx).await {
-                                    warn!(block = last_block, error = %e, "Failed to fetch block");
-                                }
+                _ = tokio::time::sleep(BLOCK_POLL_INTERVAL) => {
+                    match self.provider.get_block_by_number(BlockNumberOrTag::Number(last_block + 1)).await {
+                        Ok(Some(block)) => {
+                            last_block += 1;
+                            if let Err(e) = block_tx.send(block) {
+                                warn!(block = last_block, error = %e, "Failed to broadcast block event");
                             }
                         }
+                        Ok(None) => {} // not yet available
                         Err(e) => {
-                            warn!(error = %e, "Failed to get block number");
+                            warn!(block = last_block + 1, error = %e, "Failed to fetch block");
                         }
                     }
                 }
@@ -70,50 +64,19 @@ impl BlockWatcher {
 
         Ok(())
     }
-
-    /// Fetches a block and broadcasts it to consumers
-    async fn broadcast_block(
-        &self,
-        block_num: u64,
-        block_tx: &broadcast::Sender<BlockEvent>,
-    ) -> Result<()> {
-        let block = self
-            .provider
-            .get_block_by_number(BlockNumberOrTag::Number(block_num))
-            .await
-            .context("Failed to get block")?
-            .context("Block not found")?;
-
-        let tx_hashes: Vec<B256> = block.transactions.hashes().collect();
-
-        let event = BlockEvent {
-            block_num,
-            tx_hashes,
-            gas_used: block.header.gas_used,
-            gas_limit: block.header.gas_limit,
-            base_fee_per_gas: block.header.inner.base_fee_per_gas,
-        };
-
-        // Broadcast to all subscribers
-        if let Err(e) = block_tx.send(event) {
-            warn!(block = block_num, error = %e, "Failed to broadcast block event");
-        }
-
-        Ok(())
-    }
 }
 
 /// Runs a block logger that subscribes to block events and logs them.
 /// Exits when the block channel closes, which happens after the drain period.
-pub(crate) async fn run_block_logger(mut block_rx: broadcast::Receiver<BlockEvent>) {
+pub(crate) async fn run_block_logger(mut block_rx: broadcast::Receiver<OpBlock>) {
     loop {
         match block_rx.recv().await {
             Ok(block) => {
                 info!(
-                    blockNum = block.block_num,
-                    gasUsed = block.gas_used,
-                    gasLimit = block.gas_limit,
-                    txnCount = block.tx_hashes.len(),
+                    blockNum = block.header.number,
+                    gasUsed = block.header.gas_used,
+                    gasLimit = block.header.gas_limit,
+                    txnCount = block.transactions.hashes().count(),
                     "New block"
                 );
             }

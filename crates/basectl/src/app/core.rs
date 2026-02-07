@@ -51,38 +51,7 @@ impl App {
                 lt.poll();
             }
 
-            // Poll loadtest setup if in progress
-            if let Some(LoadTestSetup::Starting { .. }) = self.resources.loadtest_setup {
-                // Take ownership temporarily to check the receiver
-                if let Some(LoadTestSetup::Starting { config_path, mut result_rx }) =
-                    self.resources.loadtest_setup.take()
-                {
-                    match result_rx.try_recv() {
-                        Ok(Ok(handle)) => {
-                            let config_file = config_path.display().to_string();
-                            runner::activate_loadtest(&mut self.resources, handle, config_file);
-                            // loadtest_setup stays None — setup complete
-                        }
-                        Ok(Err(e)) => {
-                            self.resources.loadtest_setup = Some(LoadTestSetup::Failed {
-                                config_path,
-                                error: format!("{e:#}"),
-                            });
-                        }
-                        Err(oneshot::error::TryRecvError::Empty) => {
-                            // Still in progress, put it back
-                            self.resources.loadtest_setup =
-                                Some(LoadTestSetup::Starting { config_path, result_rx });
-                        }
-                        Err(oneshot::error::TryRecvError::Closed) => {
-                            self.resources.loadtest_setup = Some(LoadTestSetup::Failed {
-                                config_path,
-                                error: "Setup task panicked".to_string(),
-                            });
-                        }
-                    }
-                }
-            }
+            self.poll_loadtest_setup();
 
             let action = current_view.tick(&mut self.resources);
             if self.handle_action(action, &mut current_view, view_factory) {
@@ -130,6 +99,34 @@ impl App {
         }
 
         Ok(())
+    }
+
+    fn poll_loadtest_setup(&mut self) {
+        match self.resources.loadtest_setup.take() {
+            Some(LoadTestSetup::Starting { config_path, mut result_rx }) => {
+                match result_rx.try_recv() {
+                    Ok(Ok(handle)) => {
+                        let config_file = config_path.display().to_string();
+                        runner::activate_loadtest(&mut self.resources, handle, config_file);
+                    }
+                    Ok(Err(e)) => {
+                        self.resources.loadtest_setup =
+                            Some(LoadTestSetup::Failed { config_path, error: format!("{e:#}") });
+                    }
+                    Err(oneshot::error::TryRecvError::Empty) => {
+                        self.resources.loadtest_setup =
+                            Some(LoadTestSetup::Starting { config_path, result_rx });
+                    }
+                    Err(oneshot::error::TryRecvError::Closed) => {
+                        self.resources.loadtest_setup = Some(LoadTestSetup::Failed {
+                            config_path,
+                            error: "Setup task panicked".to_string(),
+                        });
+                    }
+                }
+            }
+            other => self.resources.loadtest_setup = other,
+        }
     }
 
     fn handle_action<F>(

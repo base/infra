@@ -12,7 +12,7 @@ use tracing::{debug, info, warn};
 
 use crate::{
     SenderId,
-    blocks::BlockEvent,
+    blocks::OpBlock,
     client::{self, WalletProvider},
     config::{TxSelector, TxType},
 };
@@ -125,7 +125,7 @@ impl Signer {
         mut self,
         mut resign_rx: mpsc::Receiver<ResignRequest>,
         signed_tx: mpsc::Sender<SignedTx>,
-        mut block_rx: broadcast::Receiver<BlockEvent>,
+        mut block_rx: broadcast::Receiver<OpBlock>,
         mut shutdown: broadcast::Receiver<()>,
     ) -> Result<()> {
         loop {
@@ -165,15 +165,15 @@ impl Signer {
     }
 
     /// Update gas fee from a new block's base fee
-    fn on_new_block(&mut self, block: &BlockEvent) {
-        if let Some(base_fee) = block.base_fee_per_gas {
+    fn on_new_block(&mut self, block: &OpBlock) {
+        if let Some(base_fee) = block.header.inner.base_fee_per_gas {
             let new_max_fee = u128::from(base_fee) * GAS_FEE_MULTIPLIER;
             if new_max_fee != self.max_fee_per_gas {
                 debug!(
                     sender = self.sender_id,
                     old_max_fee = self.max_fee_per_gas,
                     new_max_fee,
-                    block = block.block_num,
+                    block = block.header.number,
                     "Gas price updated from block"
                 );
                 self.max_fee_per_gas = new_max_fee;

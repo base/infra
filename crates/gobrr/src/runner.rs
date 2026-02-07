@@ -2,13 +2,14 @@ use std::sync::Arc;
 
 use alloy_primitives::{Address, B256};
 use alloy_provider::Provider;
+use alloy_rpc_client::BatchRequest;
 use anyhow::{Context, Result};
 use tokio::sync::{Semaphore, broadcast, mpsc};
 use tracing::{info, warn};
 
 use crate::{
     SenderId,
-    blocks::{BlockEvent, BlockWatcher, run_block_logger},
+    blocks::{BlockWatcher, OpBlock, run_block_logger},
     client::{create_provider, create_shared_client},
     config::{TestConfig, TxSelector},
     confirmer::run_confirmer,
@@ -91,7 +92,7 @@ pub async fn start_load_test(config_path: &str) -> Result<LoadTestHandle> {
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
 
     // Step 5b: Create block event broadcast channel
-    let (block_tx, _) = broadcast::channel::<BlockEvent>(64);
+    let (block_tx, _) = broadcast::channel::<OpBlock>(64);
 
     // Step 5c: Create confirmer pending tx channel
     let (confirmer_pending_tx, confirmer_pending_rx) = mpsc::unbounded_channel();
@@ -255,8 +256,6 @@ async fn clear_mempools(
     management_hosts: &[String],
     addresses: &[Address],
 ) {
-    use alloy_rpc_client::BatchRequest;
-
     info!(
         hosts = management_hosts.len(),
         addresses = addresses.len(),

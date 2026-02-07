@@ -19,7 +19,7 @@ pub struct LoadTestHandle {
     /// Shutdown signal for drain-phase tasks (stats reporter, block watcher)
     drain_shutdown_tx: broadcast::Sender<()>,
     /// Block event channel (dropped to signal consumers to exit)
-    block_tx: broadcast::Sender<crate::blocks::BlockEvent>,
+    block_tx: broadcast::Sender<crate::blocks::OpBlock>,
     /// Pipeline task handles (preparers, signers, senders)
     pipeline_handles: Vec<JoinHandle<()>>,
     /// Stats reporter handle
@@ -65,7 +65,7 @@ impl LoadTestHandle {
         tracker_tx: mpsc::UnboundedSender<TrackerEvent>,
         shutdown_tx: broadcast::Sender<()>,
         drain_shutdown_tx: broadcast::Sender<()>,
-        block_tx: broadcast::Sender<crate::blocks::BlockEvent>,
+        block_tx: broadcast::Sender<crate::blocks::OpBlock>,
         pipeline_handles: Vec<JoinHandle<()>>,
         stats_handle: JoinHandle<()>,
         block_handle: JoinHandle<()>,

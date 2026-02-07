@@ -9,11 +9,10 @@ use ratatui::{
 };
 
 use super::text_input::TextInput;
+use gobrr::LoadTestPhase;
+
 use crate::{
-    app::{
-        Action, Resources, View,
-        resources::{LoadTestPhase, LoadTestSetup},
-    },
+    app::{Action, Resources, View, resources::LoadTestSetup},
     commands::common::{
         COLOR_ACTIVE_BORDER, COLOR_BASE_BLUE, COLOR_ROW_HIGHLIGHTED, COLOR_ROW_SELECTED,
         build_gas_bar, format_gas, format_gwei, time_diff_color,
@@ -486,7 +485,7 @@ fn render_txpool(f: &mut Frame, area: Rect, resources: &Resources) {
         return;
     };
 
-    if lt.management_hosts.is_empty() {
+    if lt.txpool_hosts.is_empty() {
         let para = Paragraph::new("No management hosts configured")
             .style(Style::default().fg(Color::DarkGray));
         f.render_widget(para, inner);
@@ -537,12 +536,7 @@ fn render_txpool(f: &mut Frame, area: Rect, resources: &Resources) {
     f.render_widget(table, inner);
 }
 
-fn render_flashblocks(
-    f: &mut Frame,
-    area: Rect,
-    resources: &Resources,
-    table_state: &TableState,
-) {
+fn render_flashblocks(f: &mut Frame, area: Rect, resources: &Resources, table_state: &TableState) {
     let flash = &resources.flash;
 
     let title = if flash.paused {
