@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use arboard::Clipboard;
 use crossterm::event::{KeyCode, KeyEvent};
+use gobrr::LoadTestPhase;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
@@ -9,8 +10,6 @@ use ratatui::{
 };
 
 use super::text_input::TextInput;
-use gobrr::LoadTestPhase;
-
 use crate::{
     app::{Action, Resources, View, resources::LoadTestSetup},
     commands::common::{
