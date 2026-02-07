@@ -46,13 +46,12 @@ If you want to work on something that doesn't have an issue yet, open an issue f
 
 ### Making Changes
 
-1. Fork the repository and create your branch from `master`
+1. Fork the repository and create your branch from `main`
 2. Make your changes, following the existing code style
 3. Add or update tests as appropriate
 4. Ensure all checks pass locally:
    ```sh
-   just lint
-   just test
+   just ci
    ```
 
 ### Opening the Pull Request
@@ -63,14 +62,14 @@ If you want to work on something that doesn't have an issue yet, open an issue f
 ### After Submitting
 
 - Respond to feedback and requests for changes
-- Keep your PR up to date with the `master` branch
+- Keep your PR up to date with the `main` branch
 - Be patient - reviews may take time
 
 ## Submitting a Bug Report
 
 When filing a new bug report in the issue tracker, please include:
 
-- The version you are on (and that it is up to date)
+- The Base version you are on (and that it is up to date)
 - Relevant logs and error messages
 - Concrete steps to reproduce the bug
 - Any relevant configuration
@@ -83,6 +82,6 @@ If you have questions:
 
 - Open a discussion in the repository
 - Comment on the relevant issue
-- Check existing documentation and issues first
+- Check existing [documentation](https://docs.base.org/base-chain/quickstart/why-base) and issues first
 
 [help-wanted]: https://github.com/base/infra/issues?q=state%3Aopen%20label%3AM-help-wanted
