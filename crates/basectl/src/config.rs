@@ -111,9 +111,21 @@ impl ChainConfig {
     ///
     /// Resolution order:
     /// 1. Built-in config as base (if name matches "mainnet" or "sepolia")
-    /// 2. User config at ~/.base/config/<name>.yaml merged on top
-    /// 3. Or treat as standalone file path
+    /// 2. Devnet auto-detection (if name is "devnet", search for .devnet folder)
+    /// 3. User config at ~/.base/config/<name>.yaml merged on top
+    /// 4. Or treat as standalone file path
     pub fn load(name_or_path: &str) -> Result<Self> {
+        // Handle devnet auto-detection
+        if name_or_path == "devnet" {
+            if let Some(devnet_config) = Self::find_devnet_config()? {
+                return Ok(devnet_config);
+            }
+            anyhow::bail!(
+                "Devnet config not found. Searched for '.devnet/basectl.yaml' in current \
+                 directory and parent directories."
+            );
+        }
+
         let base_config = match name_or_path {
             "mainnet" => Some(Self::mainnet()),
             "sepolia" => Some(Self::sepolia()),
@@ -140,9 +152,32 @@ impl ChainConfig {
         }
 
         anyhow::bail!(
-            "Config '{name_or_path}' not found. Expected built-in name (mainnet, sepolia), \
+            "Config '{name_or_path}' not found. Expected built-in name (mainnet, sepolia, devnet), \
              user config at ~/.base/config/{name_or_path}.yaml, or a valid file path."
         )
+    }
+
+    /// Search for .devnet/basectl.yaml starting from current directory and going up
+    fn find_devnet_config() -> Result<Option<Self>> {
+        let current_dir = std::env::current_dir()
+            .context("Failed to get current directory")?;
+        
+        let mut search_dir = current_dir.as_path();
+        
+        loop {
+            let devnet_config_path = search_dir.join(".devnet").join("basectl.yaml");
+            if devnet_config_path.exists() {
+                let config = Self::load_from_file(&devnet_config_path)?;
+                return Ok(Some(config));
+            }
+            
+            match search_dir.parent() {
+                Some(parent) => search_dir = parent,
+                None => break,
+            }
+        }
+        
+        Ok(None)
     }
 
     fn load_from_file(path: &PathBuf) -> Result<Self> {
@@ -197,5 +232,14 @@ mod tests {
     fn test_unknown_config() {
         let result = ChainConfig::load("nonexistent");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_devnet_config_not_found() {
+        // When no .devnet folder exists, should return appropriate error
+        let result = ChainConfig::load("devnet");
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("Devnet config not found"));
     }
 }
