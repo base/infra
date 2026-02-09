@@ -48,13 +48,9 @@ fn start_background_services(config: &ChainConfig, resources: &mut Resources) {
     let ws_url = config.flashblocks_ws.to_string();
     let ws_url2 = config.flashblocks_ws.to_string();
 
-    tokio::spawn(async move {
-        let _ = run_flashblock_ws_timestamped(ws_url, fb_tx).await;
-    });
+    tokio::spawn(run_flashblock_ws_timestamped(ws_url, fb_tx));
 
-    tokio::spawn(async move {
-        let _ = run_flashblock_ws(ws_url2, da_fb_tx).await;
-    });
+    tokio::spawn(run_flashblock_ws(ws_url2, da_fb_tx));
 
     let rpc_url = config.rpc.to_string();
     tokio::spawn(async move {

@@ -1026,6 +1026,7 @@ dependencies = [
  "serde_yaml",
  "tokio",
  "tokio-tungstenite",
+ "tracing",
  "url",
 ]
 

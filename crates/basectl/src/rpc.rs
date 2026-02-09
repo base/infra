@@ -10,12 +10,18 @@ use futures_util::{StreamExt, stream};
 use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
+use tracing::warn;
 
 const CONCURRENT_BLOCK_FETCHES: usize = 16;
 
 use crate::{config::ChainConfig, l1_client::fetch_system_config_params};
 
 const DEFAULT_ELASTICITY: u64 = 6;
+
+/// Initial delay before reconnecting after a WebSocket failure
+const WS_RECONNECT_INITIAL_DELAY: Duration = Duration::from_secs(1);
+/// Maximum delay between reconnection attempts
+const WS_RECONNECT_MAX_DELAY: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct L2BlockRef {
@@ -39,21 +45,44 @@ pub async fn fetch_sync_status(op_node_rpc: &str) -> Result<SyncStatus> {
     Ok(status)
 }
 
-pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) -> Result<()> {
-    let (ws_stream, _) = connect_async(&url).await?;
-    let (_, mut read) = ws_stream.split();
+pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) {
+    let mut delay = WS_RECONNECT_INITIAL_DELAY;
 
-    while let Some(msg) = read.next().await {
-        let msg = msg?;
-        if !msg.is_binary() && !msg.is_text() {
-            continue;
+    loop {
+        match connect_async(&url).await {
+            Ok((ws_stream, _)) => {
+                delay = WS_RECONNECT_INITIAL_DELAY; // Reset delay on successful connect
+                let (_, mut read) = ws_stream.split();
+
+                while let Some(msg) = read.next().await {
+                    let msg = match msg {
+                        Ok(m) => m,
+                        Err(e) => {
+                            warn!("Flashblock WebSocket connection error: {e}");
+                            break; // Connection error, reconnect
+                        }
+                    };
+                    if !msg.is_binary() && !msg.is_text() {
+                        continue;
+                    }
+                    let fb = match Flashblock::try_decode_message(msg.into_data()) {
+                        Ok(fb) => fb,
+                        Err(_) => continue, // Skip malformed messages
+                    };
+                    if tx.send(fb).await.is_err() {
+                        return; // Channel closed, exit completely
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to connect to flashblock WebSocket: {e}");
+            }
         }
-        let fb = Flashblock::try_decode_message(msg.into_data())?;
-        if tx.send(fb).await.is_err() {
-            break;
-        }
+
+        // Wait before reconnecting with exponential backoff
+        tokio::time::sleep(delay).await;
+        delay = (delay * 2).min(WS_RECONNECT_MAX_DELAY);
     }
-    Ok(())
 }
 
 #[derive(Debug)]
@@ -62,26 +91,46 @@ pub struct TimestampedFlashblock {
     pub received_at: chrono::DateTime<chrono::Local>,
 }
 
-pub async fn run_flashblock_ws_timestamped(
-    url: String,
-    tx: mpsc::Sender<TimestampedFlashblock>,
-) -> Result<()> {
-    let (ws_stream, _) = connect_async(&url).await?;
-    let (_, mut read) = ws_stream.split();
+pub async fn run_flashblock_ws_timestamped(url: String, tx: mpsc::Sender<TimestampedFlashblock>) {
+    let mut delay = WS_RECONNECT_INITIAL_DELAY;
 
-    while let Some(msg) = read.next().await {
-        let msg = msg?;
-        if !msg.is_binary() && !msg.is_text() {
-            continue;
+    loop {
+        match connect_async(&url).await {
+            Ok((ws_stream, _)) => {
+                delay = WS_RECONNECT_INITIAL_DELAY; // Reset delay on successful connect
+                let (_, mut read) = ws_stream.split();
+
+                while let Some(msg) = read.next().await {
+                    let msg = match msg {
+                        Ok(m) => m,
+                        Err(e) => {
+                            warn!("Flashblock WebSocket connection error: {e}");
+                            break; // Connection error, reconnect
+                        }
+                    };
+                    if !msg.is_binary() && !msg.is_text() {
+                        continue;
+                    }
+                    let fb = match Flashblock::try_decode_message(msg.into_data()) {
+                        Ok(fb) => fb,
+                        Err(_) => continue, // Skip malformed messages
+                    };
+                    let timestamped =
+                        TimestampedFlashblock { flashblock: fb, received_at: chrono::Local::now() };
+                    if tx.send(timestamped).await.is_err() {
+                        return; // Channel closed, exit completely
+                    }
+                }
+            }
+            Err(e) => {
+                warn!("Failed to connect to flashblock WebSocket: {e}");
+            }
         }
-        let fb = Flashblock::try_decode_message(msg.into_data())?;
-        let timestamped =
-            TimestampedFlashblock { flashblock: fb, received_at: chrono::Local::now() };
-        if tx.send(timestamped).await.is_err() {
-            break;
-        }
+
+        // Wait before reconnecting with exponential backoff
+        tokio::time::sleep(delay).await;
+        delay = (delay * 2).min(WS_RECONNECT_MAX_DELAY);
     }
-    Ok(())
 }
 
 #[derive(Debug, Clone)]
