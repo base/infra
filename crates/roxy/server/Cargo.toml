@@ -30,7 +30,7 @@ hyper.workspace = true
 
 # async
 tokio.workspace = true
-futures-util = "0.3"
+futures-util.workspace = true
 
 # serialization
 serde.workspace = true
@@ -43,7 +43,7 @@ eyre.workspace = true
 
 # metrics
 metrics.workspace = true
-metrics-exporter-prometheus = "0.17"
+metrics-exporter-prometheus.workspace = true
 
 [dev-dependencies]
 rstest.workspace = true

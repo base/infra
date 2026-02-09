@@ -22,7 +22,7 @@ alloy-primitives.workspace = true
 
 # async
 tokio.workspace = true
-async-trait = "0.1"
+async-trait.workspace = true
 
 # misc
 bytes.workspace = true

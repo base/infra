@@ -8,10 +8,10 @@ publish = false
 cargo-fuzz = true
 
 [dependencies]
-libfuzzer-sys = "0.4"
-arbitrary = { version = "1", features = ["derive"] }
-roxy-rpc = { path = "../crates/rpc" }
-roxy-traits = { path = "../crates/traits" }
+libfuzzer-sys.workspace = true
+arbitrary.workspace = true
+roxy-rpc.workspace = true
+roxy-traits.workspace = true
 
 [[bin]]
 name = "fuzz_codec_decode"

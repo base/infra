@@ -1,6 +1,6 @@
 [package]
-name = "roxy-backend"
-description = "Backend implementations for Roxy RPC proxy"
+name = "roxy-test-utils"
+description = "Test utilities for Roxy RPC proxy"
 
 version.workspace = true
 edition.workspace = true
@@ -19,16 +19,13 @@ roxy-traits.workspace = true
 
 # alloy
 alloy-json-rpc.workspace = true
-alloy-primitives.workspace = true
 
 # async
 tokio.workspace = true
-async-trait = "0.1"
+async-trait.workspace = true
 
-# networking
-reqwest.workspace = true
+# serialization
+serde_json.workspace = true
 
-# misc
-tracing.workspace = true
-derive_more.workspace = true
-
+[dev-dependencies]
+rstest.workspace = true

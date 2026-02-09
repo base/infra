@@ -1,13 +1,16 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "bin/*"]
+members = ["crates/basectl", "crates/mempool-rebroadcaster", "crates/sidecrush", "bin/*", "crates/roxy/*", "crates/roxy/bin"]
 default-members = ["bin/basectl"]
-exclude = [".github/"]
+exclude = [".github/", "crates/roxy/fuzz"]
 
 [workspace.package]
 version = "0.0.0"
 edition = "2024"
+rust-version = "1.88"
 license = "MIT"
+homepage = "https://github.com/base/infra"
+repository = "https://github.com/base/infra"
 
 [workspace.lints.rust]
 missing-debug-implementations = "warn"
@@ -92,3 +95,35 @@ op-alloy-consensus = { version = "0.22.0", default-features = false }
 # base
 base-flashtypes = { git = "https://github.com/base/base.git" }
 basectl-cli = { path = "crates/basectl" }
+
+# roxy - RPC proxy crates
+roxy-types = { path = "crates/roxy/types" }
+roxy-traits = { path = "crates/roxy/traits" }
+roxy-runtime = { path = "crates/roxy/runtime" }
+roxy-backend = { path = "crates/roxy/backend" }
+roxy-cache = { path = "crates/roxy/cache" }
+roxy-rpc = { path = "crates/roxy/rpc" }
+roxy-server = { path = "crates/roxy/server" }
+roxy-config = { path = "crates/roxy/config" }
+roxy-test-utils = { path = "crates/roxy/test-utils" }
+roxyproxy-cli = { path = "crates/roxy/cli" }
+
+# roxy external dependencies
+alloy-json-rpc = "1.0"
+hyper = "1.0"
+axum = { version = "0.7", features = ["ws"] }
+reqwest = { version = "0.12", features = ["json"] }
+tower = "0.4"
+bytes = "1.0"
+eyre = "0.6"
+derive_more = { version = "2.0", features = ["full"] }
+lru = "0.12"
+redis = { version = "0.27", features = ["tokio-comp"] }
+brotli = "8.0"
+toml = "0.8"
+rstest = "0.23"
+criterion = { version = "0.5", features = ["async_tokio"] }
+arbitrary = { version = "1", features = ["derive"] }
+tokio-stream = "0.1"
+metrics-exporter-prometheus = "0.17"
+libfuzzer-sys = "0.4"

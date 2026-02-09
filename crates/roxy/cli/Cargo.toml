@@ -22,7 +22,7 @@ roxy-traits.workspace = true
 roxy-cache.workspace = true
 
 # cli
-clap = { version = "4.5", features = ["derive"] }
+clap.workspace = true
 
 # async
 tokio.workspace = true
