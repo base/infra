@@ -1,0 +1,49 @@
+[package]
+name = "roxy-server"
+description = "HTTP/WebSocket server for Roxy RPC proxy"
+
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# internal
+roxy-types.workspace = true
+roxy-traits.workspace = true
+roxy-backend.workspace = true
+roxy-rpc.workspace = true
+roxy-cache.workspace = true
+
+# alloy
+alloy-json-rpc.workspace = true
+
+# networking
+axum.workspace = true
+tower.workspace = true
+hyper.workspace = true
+
+# async
+tokio.workspace = true
+futures-util = "0.3"
+
+# serialization
+serde.workspace = true
+serde_json.workspace = true
+bytes.workspace = true
+
+# misc
+tracing.workspace = true
+eyre.workspace = true
+
+# metrics
+metrics.workspace = true
+metrics-exporter-prometheus = "0.17"
+
+[dev-dependencies]
+rstest.workspace = true

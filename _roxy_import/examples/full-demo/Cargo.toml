@@ -1,0 +1,39 @@
+[package]
+name = "roxy-full-demo"
+version.workspace = true
+edition.workspace = true
+publish = false
+description = "Full demo example for roxy JSON-RPC proxy"
+
+[[bin]]
+name = "full-demo"
+path = "src/main.rs"
+
+[dependencies]
+# Local crates
+roxyproxy-cli = { path = "../../crates/cli" }
+roxy-config = { path = "../../crates/config" }
+roxy-server = { path = "../../crates/server" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full", "signal"] }
+
+# HTTP server for mock backends
+axum = { workspace = true }
+
+# HTTP client for demo
+reqwest = { workspace = true, features = ["json"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+eyre = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[lints]
+workspace = true

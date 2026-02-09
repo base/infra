@@ -1,0 +1,95 @@
+# Roxy RPC Proxy - Example Configuration
+#
+# This is a minimal example configuration for the Roxy Ethereum JSON-RPC proxy.
+# Copy this file to roxy.toml and customize it for your environment.
+
+[server]
+# The host address to bind to
+host = "0.0.0.0"
+# The port to listen on
+port = 8545
+# Maximum number of concurrent connections
+max_connections = 10000
+# Request timeout in milliseconds
+request_timeout_ms = 30000
+# Maximum request body size in bytes (1MB)
+max_request_size = 1048576
+
+# Backend RPC endpoints
+# Define one or more upstream RPC providers
+[[backends]]
+name = "primary"
+url = "https://eth-mainnet.g.alchemy.com/v2/your-api-key"
+# Weight for load balancing (higher = more traffic)
+weight = 1
+# Maximum retry attempts on failure
+max_retries = 3
+# Request timeout in milliseconds
+timeout_ms = 10000
+
+# Uncomment to add additional backends for redundancy
+# [[backends]]
+# name = "secondary"
+# url = "https://mainnet.infura.io/v3/your-project-id"
+# weight = 1
+# max_retries = 3
+# timeout_ms = 10000
+
+# Backend groups with load balancing
+# Group multiple backends together for routing
+[[groups]]
+name = "main"
+backends = ["primary"]
+# Load balancing algorithm: ema, round_robin, random, least_connections
+load_balancer = "ema"
+
+# Uncomment if you have multiple backends
+# [[groups]]
+# name = "fallback"
+# backends = ["secondary"]
+# load_balancer = "round_robin"
+
+# Cache configuration
+[cache]
+# Enable response caching
+enabled = true
+# Maximum number of cache entries
+memory_size = 10000
+# Default TTL for cache entries in milliseconds
+default_ttl_ms = 5000
+# TTL for finalized block data in milliseconds (optional)
+# finalized_ttl_ms = 86400000
+
+# Rate limiting configuration
+[rate_limit]
+# Enable rate limiting
+enabled = false
+# Maximum requests per second per client
+requests_per_second = 1000
+# Burst capacity for traffic spikes
+burst_size = 100
+
+# Routing configuration
+[routing]
+# Default backend group for unmatched methods
+default_group = "main"
+# Methods to block entirely
+blocked_methods = ["debug_traceTransaction", "admin_addPeer"]
+
+# Specific method routing (optional)
+# [[routing.routes]]
+# method = "eth_call"
+# target = "main"
+
+# [[routing.routes]]
+# method = "eth_sendRawTransaction"
+# target = "sequencer"
+
+# Metrics configuration
+[metrics]
+# Enable Prometheus metrics endpoint
+enabled = false
+# Host for metrics server
+host = "0.0.0.0"
+# Port for metrics server
+port = 9090
