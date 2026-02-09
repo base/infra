@@ -1,0 +1,58 @@
+[package]
+name = "flashtest"
+description = "End-to-end functional test suite for Base flashblocks RPC"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Base
+base-bundles.workspace = true
+base-flashtypes.workspace = true
+
+# Async runtime
+tokio = { workspace = true }
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+
+# RPC client
+alloy-provider.workspace = true
+alloy-rpc-client.workspace = true
+alloy-rpc-types-eth.workspace = true
+
+# Ethereum types
+alloy-primitives.workspace = true
+alloy-consensus.workspace = true
+alloy-eips.workspace = true
+alloy-sol-types.workspace = true
+alloy-sol-macro = { workspace = true, features = ["json"] }
+
+# Signing
+alloy-signer.workspace = true
+alloy-signer-local.workspace = true
+alloy-network.workspace = true
+
+# OP Stack
+op-alloy-network.workspace = true
+op-alloy-rpc-types.workspace = true
+
+# Serialization
+serde = { workspace = true }
+serde_json.workspace = true
+serde_yaml.workspace = true
+
+# Error handling
+eyre.workspace = true
+
+# Logging
+tracing.workspace = true
+
+# Compression
+brotli.workspace = true
+
+# Misc
+url.workspace = true
+hex.workspace = true

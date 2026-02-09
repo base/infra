@@ -14,6 +14,7 @@ path = "main.rs"
 [dependencies]
 basectl-cli = { workspace = true }
 chrono = { workspace = true }
+flashtest = { workspace = true }
 clap = { workspace = true }
 tokio = { workspace = true }
 anyhow = { workspace = true }

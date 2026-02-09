@@ -106,7 +106,15 @@ op-alloy-consensus = { version = "0.22.0", default-features = false }
 op-alloy-network = { version = "0.22.0" }
 
 
+# misc
+brotli = "8.0"
+eyre = "0.6"
+hex = "0.4"
+alloy-sol-macro = { version = "1.5.2" }
+
 # base
+base-bundles = { git = "https://github.com/base/base.git", rev = "720f6e1a" }
 base-flashtypes = { git = "https://github.com/base/base.git", rev = "720f6e1a" }
 basectl-cli = { path = "crates/basectl" }
+flashtest = { path = "crates/flashtest" }
 gobrr = { path = "crates/gobrr" }

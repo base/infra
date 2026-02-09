@@ -20,6 +20,7 @@ pub struct Resources {
     pub system_config: Option<FullSystemConfig>,
     sys_config_rx: Option<mpsc::Receiver<FullSystemConfig>>,
     pub loadtest: Option<gobrr::LoadTestState>,
+    pub flashtest: Option<flashtest::FlashTestState>,
 }
 
 #[derive(Debug)]
@@ -57,6 +58,7 @@ impl Resources {
             system_config: None,
             sys_config_rx: None,
             loadtest: None,
+            flashtest: None,
         }
     }
 

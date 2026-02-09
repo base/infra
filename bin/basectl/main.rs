@@ -2,7 +2,10 @@ use std::{fs::File, path::Path};
 
 use anyhow::bail;
 use basectl_cli::{
-    app::{ViewId, run_app_with_view, run_loadtest_logs, run_loadtest_tui},
+    app::{
+        ViewId, run_app_with_view, run_flashtest_logs, run_flashtest_tui, run_loadtest_logs,
+        run_loadtest_tui,
+    },
     config::ChainConfig,
 };
 use chrono::Local;
@@ -42,6 +45,16 @@ enum Commands {
         #[arg(long = "file", short = 'f')]
         file: String,
         /// Output text summary every 2s instead of TUI (for headless/CI)
+        #[arg(long = "logs")]
+        logs: bool,
+    },
+    /// Run flashblocks functional test suite
+    #[command(visible_alias = "ft")]
+    Flashtest {
+        /// Path to flashtest YAML config file (for `private_key`, recipient, simulator, filter)
+        #[arg(long = "file", short = 'f')]
+        file: Option<String>,
+        /// Output text logs instead of TUI (for headless/CI)
         #[arg(long = "logs")]
         logs: bool,
     },
@@ -90,6 +103,46 @@ async fn main() -> anyhow::Result<()> {
 
                 eprintln!("Logging to: {log_filename}");
                 run_loadtest_tui(chain_config, file).await
+            }
+        }
+        Some(Commands::Flashtest { file, logs }) => {
+            let ft_config = if let Some(ref file) = file {
+                let path = Path::new(file);
+                if !path.is_file() {
+                    bail!("Flash test config not found: {}", path.display());
+                }
+                flashtest::FlashTestConfig::load(file).map_err(|e| anyhow::anyhow!("{e}"))?
+            } else {
+                flashtest::FlashTestConfig::default()
+            };
+
+            let timestamp = Local::now().format("%Y%m%d-%H%M%S");
+            let log_filename = format!("flash-test-{timestamp}.log");
+            let log_file = File::create(&log_filename)?;
+
+            let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                EnvFilter::new("warn,flashtest=debug,basectl=debug,basectl_cli=debug")
+            });
+
+            if logs {
+                let file_layer = layer().with_writer(log_file).with_ansi(false);
+                let stdout_layer = layer().with_writer(std::io::stdout);
+
+                tracing_subscriber::registry()
+                    .with(env_filter)
+                    .with(file_layer)
+                    .with(stdout_layer)
+                    .init();
+
+                eprintln!("Logging to: {log_filename}");
+                run_flashtest_logs(chain_config, ft_config).await
+            } else {
+                let file_layer = layer().with_writer(log_file).with_ansi(false);
+
+                tracing_subscriber::registry().with(env_filter).with(file_layer).init();
+
+                eprintln!("Logging to: {log_filename}");
+                run_flashtest_tui(chain_config, ft_config).await
             }
         }
         Some(Commands::Config) => run_app_with_view(chain_config, ViewId::Config).await,

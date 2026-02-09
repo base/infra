@@ -6,6 +6,7 @@ pub enum ViewId {
     Flashblocks,
     Config,
     LoadTest,
+    FlashTest,
 }
 
 #[derive(Debug)]

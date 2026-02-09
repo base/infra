@@ -258,6 +258,86 @@ fn format_gas(gas: u64) -> String {
     }
 }
 
+/// Run flash test with TUI dashboard.
+pub async fn run_flashtest_tui(
+    config: ChainConfig,
+    ft_config: flashtest::FlashTestConfig,
+) -> Result<()> {
+    let mut resources = Resources::new(config.clone());
+    start_background_services(&config, &mut resources);
+
+    let rpc_url = config.rpc.to_string();
+    let flashblocks_ws_url = config.flashblocks_ws.to_string();
+    let handle = flashtest::start_flash_test(&rpc_url, &flashblocks_ws_url, ft_config)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    resources.flashtest = Some(flashtest::FlashTestState::new(handle.event_rx, rpc_url));
+
+    let app = App::new(resources, ViewId::FlashTest);
+    app.run(create_view).await
+}
+
+/// Run flash test with text logs output (for headless/CI environments).
+pub async fn run_flashtest_logs(
+    config: ChainConfig,
+    ft_config: flashtest::FlashTestConfig,
+) -> Result<()> {
+    let rpc_url = config.rpc.to_string();
+    let flashblocks_ws_url = config.flashblocks_ws.to_string();
+    let handle = flashtest::start_flash_test(&rpc_url, &flashblocks_ws_url, ft_config)
+        .await
+        .map_err(|e| anyhow::anyhow!("{e}"))?;
+    let mut state = flashtest::FlashTestState::new(handle.event_rx, rpc_url);
+
+    let mut poll_interval = tokio::time::interval(Duration::from_millis(100));
+
+    println!("Flash test started.\n");
+
+    loop {
+        poll_interval.tick().await;
+        state.poll();
+
+        // Print new results
+        for entry in &state.results {
+            match entry.status {
+                flashtest::FlashTestStatus::Passed => {
+                    let dur = entry.duration.map_or(0, |d| d.as_millis());
+                    println!("  PASS {} ({dur}ms)", entry.name);
+                }
+                flashtest::FlashTestStatus::Failed => {
+                    let dur = entry.duration.map_or(0, |d| d.as_millis());
+                    println!("  FAIL {} ({dur}ms)", entry.name);
+                    if let Some(ref err) = entry.error {
+                        println!("       {err}");
+                    }
+                }
+                flashtest::FlashTestStatus::Skipped => {
+                    println!("  SKIP {}", entry.name);
+                    if let Some(ref reason) = entry.skip_reason {
+                        println!("       {reason}");
+                    }
+                }
+                flashtest::FlashTestStatus::Running => {}
+            }
+        }
+
+        if state.phase == flashtest::FlashTestPhase::Complete {
+            println!();
+            println!(
+                "Complete: {} passed, {} failed, {} skipped",
+                state.passed, state.failed, state.skipped
+            );
+            break;
+        }
+    }
+
+    if state.failed > 0 {
+        anyhow::bail!("{} test(s) failed", state.failed);
+    }
+
+    Ok(())
+}
+
 fn start_background_services(config: &ChainConfig, resources: &mut Resources) {
     let (fb_tx, fb_rx) = mpsc::channel::<TimestampedFlashblock>(100);
     let (da_fb_tx, da_fb_rx) = mpsc::channel::<Flashblock>(100);
