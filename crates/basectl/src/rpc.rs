@@ -14,7 +14,7 @@ use tracing::warn;
 
 const CONCURRENT_BLOCK_FETCHES: usize = 16;
 
-use crate::{config::ChainConfig, l1_client::fetch_system_config_params};
+use crate::{config::ChainConfig, l1_client::fetch_system_config_params, tui::Toast};
 
 const DEFAULT_ELASTICITY: u64 = 6;
 
@@ -45,7 +45,11 @@ pub async fn fetch_sync_status(op_node_rpc: &str) -> Result<SyncStatus> {
     Ok(status)
 }
 
-pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) {
+pub async fn run_flashblock_ws(
+    url: String,
+    tx: mpsc::Sender<Flashblock>,
+    toast_tx: Option<mpsc::Sender<Toast>>,
+) {
     let mut delay = WS_RECONNECT_INITIAL_DELAY;
 
     loop {
@@ -59,6 +63,9 @@ pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) {
                         Ok(m) => m,
                         Err(e) => {
                             warn!("Flashblock WebSocket connection error: {e}");
+                            if let Some(ref tx) = toast_tx {
+                                let _ = tx.try_send(Toast::warning("WebSocket disconnected"));
+                            }
                             break; // Connection error, reconnect
                         }
                     };
@@ -76,6 +83,12 @@ pub async fn run_flashblock_ws(url: String, tx: mpsc::Sender<Flashblock>) {
             }
             Err(e) => {
                 warn!("Failed to connect to flashblock WebSocket: {e}");
+                if let Some(ref tx) = toast_tx {
+                    let _ = tx.try_send(Toast::warning(format!(
+                        "WebSocket connection failed, retrying in {}s",
+                        delay.as_secs()
+                    )));
+                }
             }
         }
 
@@ -91,7 +104,11 @@ pub struct TimestampedFlashblock {
     pub received_at: chrono::DateTime<chrono::Local>,
 }
 
-pub async fn run_flashblock_ws_timestamped(url: String, tx: mpsc::Sender<TimestampedFlashblock>) {
+pub async fn run_flashblock_ws_timestamped(
+    url: String,
+    tx: mpsc::Sender<TimestampedFlashblock>,
+    toast_tx: Option<mpsc::Sender<Toast>>,
+) {
     let mut delay = WS_RECONNECT_INITIAL_DELAY;
 
     loop {
@@ -105,6 +122,9 @@ pub async fn run_flashblock_ws_timestamped(url: String, tx: mpsc::Sender<Timesta
                         Ok(m) => m,
                         Err(e) => {
                             warn!("Flashblock WebSocket connection error: {e}");
+                            if let Some(ref tx) = toast_tx {
+                                let _ = tx.try_send(Toast::warning("WebSocket disconnected"));
+                            }
                             break; // Connection error, reconnect
                         }
                     };
@@ -124,6 +144,12 @@ pub async fn run_flashblock_ws_timestamped(url: String, tx: mpsc::Sender<Timesta
             }
             Err(e) => {
                 warn!("Failed to connect to flashblock WebSocket: {e}");
+                if let Some(ref tx) = toast_tx {
+                    let _ = tx.try_send(Toast::warning(format!(
+                        "WebSocket connection failed, retrying in {}s",
+                        delay.as_secs()
+                    )));
+                }
             }
         }
 
