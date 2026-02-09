@@ -117,14 +117,10 @@ impl ChainConfig {
     /// so this config may need to be refreshed after devnet restarts.
     pub fn devnet() -> Self {
         // Try to read system_config and batcher from rollup.json if it exists
-        let (system_config, batcher_address) = Self::load_devnet_addresses()
-            .unwrap_or_else(|| {
-                // Placeholder addresses - will be updated when devnet is running
-                (
-                    "0x0000000000000000000000000000000000000000".parse().unwrap(),
-                    None,
-                )
-            });
+        let (system_config, batcher_address) = Self::load_devnet_addresses().unwrap_or_else(|| {
+            // Placeholder addresses - will be updated when devnet is running
+            ("0x0000000000000000000000000000000000000000".parse().unwrap(), None)
+        });
 
         Self {
             name: "devnet".to_string(),
@@ -148,22 +144,22 @@ impl ChainConfig {
         ];
 
         for path in &possible_paths {
-            if let Ok(contents) = std::fs::read_to_string(path) {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents) {
-                    let system_config = json
-                        .get("l1_system_config_address")
-                        .and_then(|v| v.as_str())
-                        .and_then(|s| s.parse::<Address>().ok())?;
+            if let Ok(contents) = std::fs::read_to_string(path)
+                && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
+            {
+                let system_config = json
+                    .get("l1_system_config_address")
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<Address>().ok())?;
 
-                    let batcher_address = json
-                        .get("genesis")
-                        .and_then(|g| g.get("system_config"))
-                        .and_then(|sc| sc.get("batcherAddr"))
-                        .and_then(|v| v.as_str())
-                        .and_then(|s| s.parse::<Address>().ok());
+                let batcher_address = json
+                    .get("genesis")
+                    .and_then(|g| g.get("system_config"))
+                    .and_then(|sc| sc.get("batcherAddr"))
+                    .and_then(|v| v.as_str())
+                    .and_then(|s| s.parse::<Address>().ok());
 
-                    return Some((system_config, batcher_address));
-                }
+                return Some((system_config, batcher_address));
             }
         }
 
