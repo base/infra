@@ -55,6 +55,7 @@ unknown-git = "deny"
 
 # Allow git sources from known upstream repositories
 allow-git = [
+    "https://github.com/base/base",
     "https://github.com/paradigmxyz/reth",
     "http://github.com/flashbots/rollup-boost",
     "https://github.com/flashbots/rollup-boost",

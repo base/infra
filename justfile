@@ -101,3 +101,7 @@ docker-image:
 # Run mempool rebroadcaster service
 run-mempool-rebroadcaster:
     cargo run -p mempool-rebroadcaster -- --geth-mempool-endpoint {{env_var("GETH_MEMPOOL_ENDPOINT")}} --reth-mempool-endpoint {{env_var("RETH_MEMPOOL_ENDPOINT")}}
+
+# Run basectl with specified config (mainnet, sepolia, devnet, or path)
+basectl config="mainnet":
+    cargo run -p basectl --release -- -c {{config}}
