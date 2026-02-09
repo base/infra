@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use alloy_primitives::Address;
+use alloy_provider::{Provider, ProviderBuilder};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -82,6 +83,26 @@ mod option_address_serde {
     }
 }
 
+/// Response from the `optimism_rollupConfig` RPC method.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RollupConfig {
+    pub genesis: GenesisConfig,
+    pub l1_system_config_address: Address,
+}
+
+/// Genesis configuration from rollup config.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GenesisConfig {
+    pub system_config: GenesisSystemConfig,
+}
+
+/// System config within genesis.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GenesisSystemConfig {
+    #[serde(rename = "batcherAddr")]
+    pub batcher_addr: Address,
+}
+
 impl ChainConfig {
     pub fn mainnet() -> Self {
         Self {
@@ -109,61 +130,38 @@ impl ChainConfig {
 
     /// Returns a devnet configuration for local development.
     ///
-    /// This attempts to read dynamic addresses from the devnet rollup.json file
-    /// at `../base/base/.devnet/l2/configs/rollup.json` (relative to the repo root).
-    /// If the file is not found, placeholder addresses are used.
+    /// The devnet addresses are fetched dynamically from the op-node via the
+    /// `optimism_rollupConfig` RPC method since they are regenerated each time
+    /// the devnet is started.
     ///
-    /// Note: Devnet addresses are regenerated each time the devnet is started,
-    /// so this config may need to be refreshed after devnet restarts.
-    pub fn devnet() -> Self {
-        // Try to read system_config and batcher from rollup.json if it exists
-        let (system_config, batcher_address) = Self::load_devnet_addresses().unwrap_or_else(|| {
-            // Placeholder addresses - will be updated when devnet is running
-            ("0x0000000000000000000000000000000000000000".parse().unwrap(), None)
-        });
-
+    /// Use `load("devnet")` to get a fully configured devnet with addresses
+    /// fetched from the running op-node.
+    fn devnet_base() -> Self {
         Self {
             name: "devnet".to_string(),
             rpc: Url::parse("http://localhost:7545").unwrap(),
             flashblocks_ws: Url::parse("ws://localhost:7111").unwrap(),
             l1_rpc: Url::parse("http://localhost:4545").unwrap(),
             op_node_rpc: Some(Url::parse("http://localhost:7549").unwrap()),
-            system_config,
-            batcher_address,
+            // These will be populated by fetch_rollup_config
+            system_config: Address::ZERO,
+            batcher_address: None,
         }
     }
 
-    /// Attempts to load devnet addresses from the rollup.json file.
-    fn load_devnet_addresses() -> Option<(Address, Option<Address>)> {
-        // Try common locations for the devnet rollup.json
-        let possible_paths = [
-            // Relative to infra repo when running from project root
-            PathBuf::from("../base/base/.devnet/l2/configs/rollup.json"),
-            // Absolute path from home directory
-            dirs::home_dir()?.join("base/base/.devnet/l2/configs/rollup.json"),
-        ];
+    /// Fetches the rollup config from the op-node via the `optimism_rollupConfig` RPC method.
+    async fn fetch_rollup_config(op_node_url: &Url) -> Result<RollupConfig> {
+        let provider = ProviderBuilder::new()
+            .connect(op_node_url.as_str())
+            .await
+            .with_context(|| format!("Failed to connect to op-node at {op_node_url}"))?;
 
-        for path in &possible_paths {
-            if let Ok(contents) = std::fs::read_to_string(path)
-                && let Ok(json) = serde_json::from_str::<serde_json::Value>(&contents)
-            {
-                let system_config = json
-                    .get("l1_system_config_address")
-                    .and_then(|v| v.as_str())
-                    .and_then(|s| s.parse::<Address>().ok())?;
+        let config: RollupConfig = provider
+            .raw_request("optimism_rollupConfig".into(), ())
+            .await
+            .with_context(|| "Failed to fetch rollup config from op-node")?;
 
-                let batcher_address = json
-                    .get("genesis")
-                    .and_then(|g| g.get("system_config"))
-                    .and_then(|sc| sc.get("batcherAddr"))
-                    .and_then(|v| v.as_str())
-                    .and_then(|s| s.parse::<Address>().ok());
-
-                return Some((system_config, batcher_address));
-            }
-        }
-
-        None
+        Ok(config)
     }
 
     /// Load config by name or path
@@ -172,11 +170,14 @@ impl ChainConfig {
     /// 1. Built-in config as base (if name matches "mainnet", "sepolia", or "devnet")
     /// 2. User config at ~/.base/config/<name>.yaml merged on top
     /// 3. Or treat as standalone file path
-    pub fn load(name_or_path: &str) -> Result<Self> {
+    ///
+    /// For devnet, the `system_config` and `batcher_address` are fetched dynamically
+    /// from the op-node via the `optimism_rollupConfig` RPC method.
+    pub async fn load(name_or_path: &str) -> Result<Self> {
         let base_config = match name_or_path {
             "mainnet" => Some(Self::mainnet()),
             "sepolia" => Some(Self::sepolia()),
-            "devnet" => Some(Self::devnet()),
+            "devnet" => Some(Self::load_devnet().await?),
             _ => None,
         };
 
@@ -203,6 +204,22 @@ impl ChainConfig {
             "Config '{name_or_path}' not found. Expected built-in name (mainnet, sepolia, devnet), \
              user config at ~/.base/config/{name_or_path}.yaml, or a valid file path."
         )
+    }
+
+    /// Load devnet config by fetching addresses from the op-node.
+    async fn load_devnet() -> Result<Self> {
+        let mut config = Self::devnet_base();
+
+        let op_node_url = config.op_node_rpc.as_ref().expect("devnet should have op_node_rpc");
+
+        let rollup_config = Self::fetch_rollup_config(op_node_url).await.with_context(
+            || "Failed to fetch rollup config from op-node. Is the devnet running?",
+        )?;
+
+        config.system_config = rollup_config.l1_system_config_address;
+        config.batcher_address = Some(rollup_config.genesis.system_config.batcher_addr);
+
+        Ok(config)
     }
 
     fn load_from_file(path: &PathBuf) -> Result<Self> {
@@ -242,17 +259,21 @@ impl ChainConfig {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_builtin_configs() {
-        let mainnet = ChainConfig::load("mainnet").unwrap();
+    #[tokio::test]
+    async fn test_builtin_configs() {
+        let mainnet = ChainConfig::load("mainnet").await.unwrap();
         assert_eq!(mainnet.name, "mainnet");
         assert!(mainnet.rpc.as_str().contains("mainnet"));
 
-        let sepolia = ChainConfig::load("sepolia").unwrap();
+        let sepolia = ChainConfig::load("sepolia").await.unwrap();
         assert_eq!(sepolia.name, "sepolia");
         assert!(sepolia.rpc.as_str().contains("sepolia"));
+    }
 
-        let devnet = ChainConfig::load("devnet").unwrap();
+    #[test]
+    fn test_devnet_base_config() {
+        // Test the base devnet config structure (without RPC call)
+        let devnet = ChainConfig::devnet_base();
         assert_eq!(devnet.name, "devnet");
         assert!(devnet.rpc.as_str().contains("localhost"));
         assert_eq!(devnet.rpc.as_str(), "http://localhost:7545/");
@@ -262,9 +283,9 @@ mod tests {
         assert_eq!(devnet.op_node_rpc.unwrap().as_str(), "http://localhost:7549/");
     }
 
-    #[test]
-    fn test_unknown_config() {
-        let result = ChainConfig::load("nonexistent");
+    #[tokio::test]
+    async fn test_unknown_config() {
+        let result = ChainConfig::load("nonexistent").await;
         assert!(result.is_err());
     }
 }
