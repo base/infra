@@ -134,11 +134,7 @@ impl View for FlashblocksView {
         let flash = &resources.flash;
 
         let missed = resources.flash.missed_flashblocks;
-        let missed_str = if missed > 0 {
-            format!(" | {missed} missed")
-        } else {
-            String::new()
-        };
+        let missed_str = if missed > 0 { format!(" | {missed} missed") } else { String::new() };
         let title = if flash.paused {
             format!(" Flashblocks [PAUSED] - {} msgs{missed_str} ", flash.message_count)
         } else {

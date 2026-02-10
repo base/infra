@@ -238,7 +238,7 @@ pub async fn fetch_initial_backlog_with_progress(
             blocks.push(block);
             blocks_fetched += 1;
 
-            if blocks_fetched % 10 == 0 {
+            if blocks_fetched.is_multiple_of(10) {
                 let _ = progress_tx
                     .send(BacklogFetchResult::Progress(BacklogProgress {
                         current_block: blocks_fetched,
