@@ -2737,10 +2737,19 @@ dependencies = [
  "alloy-rpc-types",
  "alloy-rpc-types-eth",
  "alloy-trie",
- "clap",
- "dotenvy",
  "serde",
  "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "mempool-rebroadcaster-bin"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "dotenvy",
+ "mempool-rebroadcaster",
  "tokio",
  "tracing",
  "tracing-subscriber",
@@ -3976,7 +3985,17 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cadence",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "sidecrush-bin"
+version = "0.1.0"
+dependencies = [
+ "cadence",
  "clap",
+ "sidecrush",
  "tokio",
  "tracing",
  "tracing-subscriber",

@@ -44,9 +44,40 @@ skip = [
     # Common ecosystem duplicates
     "getrandom",
     "hashbrown",
+    "itertools",
+    "foldhash",
+    "lru",
+
+    # Random number generation
+    "rand",
+    "rand_chacha",
+    "rand_core",
+
+    # Proc-macro / derive ecosystem (alloy-tx-macros vs ratatui/instability)
+    "darling",
+    "darling_core",
+    "darling_macro",
+
+    # ratatui vs alloy transitive mismatches
+    "strum",
+    "strum_macros",
+    "unicode-width",
+
+    # crossterm/ratatui vs tempfile (rustix 0.38 vs 1.x)
+    "rustix",
+    "linux-raw-sys",
 
     # Windows platform crates
     "windows-sys",
+    "windows-targets",
+    "windows_aarch64_gnullvm",
+    "windows_aarch64_msvc",
+    "windows_i686_gnu",
+    "windows_i686_gnullvm",
+    "windows_i686_msvc",
+    "windows_x86_64_gnu",
+    "windows_x86_64_gnullvm",
+    "windows_x86_64_msvc",
 ]
 
 [sources]

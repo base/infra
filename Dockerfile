@@ -13,7 +13,7 @@ COPY . .
 
 RUN PROFILE_FLAG=$([ "$RELEASE" = "true" ] && echo "--release" || echo "") && \
     TARGET_DIR=$([ "$RELEASE" = "true" ] && echo "release" || echo "debug") && \
-    cargo build $PROFILE_FLAG --features="$FEATURES" --package=${SERVICE_NAME}; \
+    cargo build $PROFILE_FLAG --features="$FEATURES" --bin=${SERVICE_NAME}; \
     cp target/$TARGET_DIR/${SERVICE_NAME} /tmp/final_binary
 
 #
