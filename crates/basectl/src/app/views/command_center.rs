@@ -407,6 +407,16 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
                 resources.flash.message_count.to_string(),
                 Style::default().fg(Color::White),
             ),
+            Span::raw("  "),
+            Span::styled("Missed: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                resources.flash.missed_flashblocks.to_string(),
+                Style::default().fg(if resources.flash.missed_flashblocks > 0 {
+                    Color::Red
+                } else {
+                    Color::Green
+                }),
+            ),
             Span::styled(flash_status, Style::default().fg(Color::Yellow)),
         ]),
     ];

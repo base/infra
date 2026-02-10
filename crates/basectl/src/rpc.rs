@@ -215,7 +215,11 @@ pub async fn fetch_initial_backlog_with_progress(
 
         let block_numbers: Vec<u64> = ((safe_block + 1)..=unsafe_block).collect();
 
-        let mut blocks: Vec<BacklogBlock> = stream::iter(block_numbers)
+        let mut total_da_bytes: u64 = 0;
+        let mut blocks_fetched: u64 = 0;
+        let mut blocks: Vec<BacklogBlock> = Vec::with_capacity(block_numbers.len());
+
+        let mut fetch_stream = stream::iter(block_numbers)
             .map(|block_num| {
                 let provider = Arc::clone(&provider);
                 async move {
@@ -227,26 +231,27 @@ pub async fn fetch_initial_backlog_with_progress(
                     }
                 }
             })
-            .buffer_unordered(CONCURRENT_BLOCK_FETCHES)
-            .collect()
-            .await;
+            .buffer_unordered(CONCURRENT_BLOCK_FETCHES);
 
-        blocks.sort_by_key(|b| b.block_number);
-
-        let mut total_da_bytes: u64 = 0;
-        for (i, block) in blocks.into_iter().enumerate() {
+        while let Some(block) = fetch_stream.next().await {
             total_da_bytes = total_da_bytes.saturating_add(block.da_bytes);
-            let _ = progress_tx.send(BacklogFetchResult::Block(block)).await;
+            blocks.push(block);
+            blocks_fetched += 1;
 
-            if (i + 1) % 10 == 0 {
+            if blocks_fetched % 10 == 0 {
                 let _ = progress_tx
                     .send(BacklogFetchResult::Progress(BacklogProgress {
-                        current_block: (i + 1) as u64,
+                        current_block: blocks_fetched,
                         total_blocks,
                         da_bytes_so_far: total_da_bytes,
                     }))
                     .await;
             }
+        }
+
+        blocks.sort_by_key(|b| b.block_number);
+        for block in blocks {
+            let _ = progress_tx.send(BacklogFetchResult::Block(block)).await;
         }
 
         Ok::<_, anyhow::Error>(InitialBacklog {

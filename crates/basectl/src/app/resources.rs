@@ -48,7 +48,9 @@ pub struct FlashState {
     pub current_gas_limit: u64,
     pub current_base_fee: Option<u128>,
     pub message_count: u64,
+    pub missed_flashblocks: u64,
     pub paused: bool,
+    last_flashblock: Option<(u64, u64)>,
     fb_rx: Option<mpsc::Receiver<TimestampedFlashblock>>,
 }
 
@@ -278,7 +280,9 @@ impl FlashState {
             current_gas_limit: 0,
             current_base_fee: None,
             message_count: 0,
+            missed_flashblocks: 0,
             paused: false,
+            last_flashblock: None,
             fb_rx: None,
         }
     }
@@ -307,6 +311,17 @@ impl FlashState {
         let TimestampedFlashblock { flashblock: fb, received_at } = tsf;
 
         self.message_count += 1;
+
+        let block_number = fb.metadata.block_number;
+        let index = fb.index;
+        if let Some((last_block, last_index)) = self.last_flashblock {
+            if block_number == last_block && index > last_index + 1 {
+                self.missed_flashblocks += index - last_index - 1;
+            } else if block_number > last_block && index > 0 {
+                self.missed_flashblocks += index;
+            }
+        }
+        self.last_flashblock = Some((block_number, index));
 
         let base_fee =
             fb.base.as_ref().map(|base| base.base_fee_per_gas.try_into().unwrap_or(u128::MAX));

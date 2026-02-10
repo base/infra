@@ -133,10 +133,16 @@ impl View for FlashblocksView {
     fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources) {
         let flash = &resources.flash;
 
-        let title = if flash.paused {
-            format!(" Flashblocks [PAUSED] - {} msgs ", flash.message_count)
+        let missed = resources.flash.missed_flashblocks;
+        let missed_str = if missed > 0 {
+            format!(" | {missed} missed")
         } else {
-            format!(" Flashblocks - {} msgs ", flash.message_count)
+            String::new()
+        };
+        let title = if flash.paused {
+            format!(" Flashblocks [PAUSED] - {} msgs{missed_str} ", flash.message_count)
+        } else {
+            format!(" Flashblocks - {} msgs{missed_str} ", flash.message_count)
         };
 
         let border_color = if flash.paused { Color::Yellow } else { COLOR_ACTIVE_BORDER };
