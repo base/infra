@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["crates/*", "bin/*"]
-default-members = ["bin/basectl"]
+default-members = ["bin/*"]
 exclude = [".github/"]
 
 [workspace.package]
