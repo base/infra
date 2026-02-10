@@ -20,6 +20,8 @@ const RECEIPT_TIMEOUT: Duration = Duration::from_secs(60);
 const BATCH_SIZE: usize = 10;
 /// Number of batches to run concurrently
 const CONCURRENT_BATCHES: usize = 10;
+/// Maximum number of outstanding funding transactions before waiting for confirmation
+const MAX_OUTSTANDING_TXS: usize = 100;
 
 /// Handles funding sender accounts to a target balance
 pub(crate) struct Funder {
@@ -95,78 +97,99 @@ impl Funder {
             self.provider.estimate_eip1559_fees().await.context("Failed to estimate fees")?;
         let max_fee = fees.max_fee_per_gas;
 
-        // Step 3: Chunk into batches and send concurrently
-        info!(count = to_fund.len(), "Sending funding transactions in batches");
-        let chunks: Vec<Vec<(usize, Address, U256, u64)>> =
-            to_fund.chunks(BATCH_SIZE).map(|c| c.to_vec()).collect();
+        // Step 3: Process in waves of MAX_OUTSTANDING_TXS, waiting for confirmation between waves
+        let total = to_fund.len();
+        let waves: Vec<Vec<(usize, Address, U256, u64)>> =
+            to_fund.chunks(MAX_OUTSTANDING_TXS).map(|c| c.to_vec()).collect();
 
         let wallet = self.provider.wallet();
         let chain_id = self.chain_id;
         let provider = &self.provider;
-
-        let batch_results: Vec<Result<Vec<(usize, Address, B256)>>> = stream::iter(chunks)
-            .map(|chunk| async move {
-                send_funding_batch(provider, wallet, chain_id, max_fee, chunk).await
-            })
-            .buffer_unordered(CONCURRENT_BATCHES)
-            .collect()
-            .await;
-
-        // Collect all sent transactions
-        let mut sent_txs: Vec<(usize, Address, B256)> = Vec::new();
-        for result in batch_results {
-            match result {
-                Ok(txs) => sent_txs.extend(txs),
-                Err(e) => {
-                    warn!(error = %e, "Batch funding failed");
-                    return Err(e).context("Failed to send funding batch");
-                }
-            }
-        }
-
-        if sent_txs.is_empty() {
-            info!("No funding transactions were sent");
-            return Ok(());
-        }
-
-        // Step 4: Wait for confirmations by polling for receipts
-        info!(count = sent_txs.len(), "Waiting for funding transactions to confirm");
-        let start = std::time::Instant::now();
         let poll_interval = Duration::from_millis(500);
 
-        for (i, address, tx_hash) in sent_txs {
-            loop {
-                if start.elapsed() > RECEIPT_TIMEOUT {
-                    anyhow::bail!(
-                        "Timeout waiting for funding receipt for sender {i} ({}s)",
-                        RECEIPT_TIMEOUT.as_secs()
-                    );
-                }
+        for (wave_idx, wave) in waves.iter().enumerate() {
+            info!(
+                wave = wave_idx + 1,
+                wave_size = wave.len(),
+                total,
+                "Sending funding wave"
+            );
 
-                match self.provider.get_transaction_receipt(tx_hash).await {
-                    Ok(Some(receipt)) => {
-                        if receipt.status() {
-                            info!(
-                                sender = i,
-                                address = %address,
-                                tx_hash = %tx_hash,
-                                "Funding confirmed"
-                            );
-                        } else {
-                            anyhow::bail!("Funding transaction failed for sender {i}");
-                        }
-                        break;
-                    }
-                    Ok(None) => {
-                        // Not yet mined, wait and retry
-                        tokio::time::sleep(poll_interval).await;
-                    }
+            // Send this wave in batches concurrently
+            let chunks: Vec<Vec<(usize, Address, U256, u64)>> =
+                wave.chunks(BATCH_SIZE).map(|c| c.to_vec()).collect();
+
+            let batch_results: Vec<Result<Vec<(usize, Address, B256)>>> = stream::iter(chunks)
+                .map(|chunk| async move {
+                    send_funding_batch(provider, wallet, chain_id, max_fee, chunk).await
+                })
+                .buffer_unordered(CONCURRENT_BATCHES)
+                .collect()
+                .await;
+
+            // Collect sent transactions for this wave
+            let mut sent_txs: Vec<(usize, Address, B256)> = Vec::new();
+            for result in batch_results {
+                match result {
+                    Ok(txs) => sent_txs.extend(txs),
                     Err(e) => {
-                        warn!(sender = i, tx_hash = %tx_hash, error = %e, "Error fetching receipt, retrying");
-                        tokio::time::sleep(poll_interval).await;
+                        warn!(error = %e, "Batch funding failed");
+                        return Err(e).context("Failed to send funding batch");
                     }
                 }
             }
+
+            if sent_txs.is_empty() {
+                continue;
+            }
+
+            // Wait for all transactions in this wave to confirm before sending the next wave
+            info!(
+                wave = wave_idx + 1,
+                count = sent_txs.len(),
+                "Waiting for funding wave to confirm"
+            );
+            let start = std::time::Instant::now();
+
+            for (i, address, tx_hash) in &sent_txs {
+                loop {
+                    if start.elapsed() > RECEIPT_TIMEOUT {
+                        anyhow::bail!(
+                            "Timeout waiting for funding receipt for sender {i} ({}s)",
+                            RECEIPT_TIMEOUT.as_secs()
+                        );
+                    }
+
+                    match self.provider.get_transaction_receipt(*tx_hash).await {
+                        Ok(Some(receipt)) => {
+                            if receipt.status() {
+                                info!(
+                                    sender = i,
+                                    address = %address,
+                                    tx_hash = %tx_hash,
+                                    "Funding confirmed"
+                                );
+                            } else {
+                                anyhow::bail!("Funding transaction failed for sender {i}");
+                            }
+                            break;
+                        }
+                        Ok(None) => {
+                            tokio::time::sleep(poll_interval).await;
+                        }
+                        Err(e) => {
+                            warn!(sender = i, tx_hash = %tx_hash, error = %e, "Error fetching receipt, retrying");
+                            tokio::time::sleep(poll_interval).await;
+                        }
+                    }
+                }
+            }
+
+            info!(
+                wave = wave_idx + 1,
+                count = sent_txs.len(),
+                "Funding wave confirmed"
+            );
         }
 
         info!("All senders funded successfully");

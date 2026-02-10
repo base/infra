@@ -242,7 +242,7 @@ pub async fn start_load_test(config_path: &str) -> Result<LoadTestHandle> {
                     handles.push(sender_handle);
                 }
                 Ok(Err(e)) => {
-                    tracing::error!(error = %e, "Failed to create signer");
+                    tracing::error!(error = ?e, "Failed to create signer");
                 }
                 Err(e) => {
                     tracing::error!(error = %e, "Signer init task panicked");
