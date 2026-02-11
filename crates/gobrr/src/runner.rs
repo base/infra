@@ -133,7 +133,13 @@ pub async fn start_load_test(config_path: &str) -> Result<LoadTestHandle> {
                 loop {
                     tokio::select! {
                         biased;
-                        _ = replenish_shutdown.recv() => break,
+                        _ = replenish_shutdown.recv() => {
+                            // Close the semaphore so signers blocked in
+                            // acquire_rate_permit() get an AcquireError
+                            // and can check their shutdown channel.
+                            limiter.close();
+                            break;
+                        }
                         _ = interval.tick() => {
                             let available = limiter.available_permits();
                             if available < max_permits {
