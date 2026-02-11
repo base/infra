@@ -56,6 +56,8 @@ pub(crate) struct Signer {
     rate_limiter: Option<Arc<Semaphore>>,
     tx_selector: TxSelector,
     rng: StdRng,
+    /// Provider for nonce re-sync on each block
+    provider: crate::client::Provider,
 }
 
 impl Signer {
@@ -74,7 +76,7 @@ impl Signer {
         let sender_address = signer.address();
         let wallet = EthereumWallet::from(signer);
         let provider: WalletProvider =
-            client::create_wallet_provider(http_client, rpc_url, wallet.clone())?;
+            client::create_wallet_provider(http_client.clone(), rpc_url, wallet.clone())?;
 
         // Fetch initial nonce from pending state to account for mempool transactions
         let initial_nonce = provider
@@ -82,6 +84,9 @@ impl Signer {
             .block_id(BlockNumberOrTag::Pending.into())
             .await
             .context("Failed to get initial nonce")?;
+
+        // Read-only provider for nonce re-sync on each block
+        let ro_provider = client::create_provider(http_client, rpc_url)?;
 
         info!(
             sender = sender_id,
@@ -100,6 +105,7 @@ impl Signer {
             rate_limiter,
             tx_selector,
             rng: StdRng::from_entropy(),
+            provider: ro_provider,
         })
     }
 
@@ -137,7 +143,7 @@ impl Signer {
                 }
                 result = block_rx.recv() => {
                     match result {
-                        Ok(block) => self.on_new_block(&block),
+                        Ok(block) => self.on_new_block(&block).await,
                         Err(broadcast::error::RecvError::Lagged(n)) => {
                             debug!(sender = self.sender_id, missed = n, "Signer lagged behind block events");
                         }
@@ -185,8 +191,8 @@ impl Signer {
         Ok(Some(permit))
     }
 
-    /// Update gas fee from a new block's base fee
-    fn on_new_block(&mut self, block: &OpBlock) {
+    /// Update gas fee and re-sync nonce from a new block
+    async fn on_new_block(&mut self, block: &OpBlock) {
         if let Some(base_fee) = block.header.inner.base_fee_per_gas {
             let new_max_fee = u128::from(base_fee).saturating_mul(GAS_FEE_MULTIPLIER);
             if new_max_fee != self.max_fee_per_gas {
@@ -198,6 +204,43 @@ impl Signer {
                     "Gas price updated from block"
                 );
                 self.max_fee_per_gas = new_max_fee;
+            }
+        }
+
+        // Re-sync nonce from chain to heal any gaps caused by transient RPC failures.
+        // Without this, a single failed eth_sendRawTransaction silently consumes a nonce
+        // (the signer increments before RPC submission), creating a gap that permanently
+        // blocks all subsequent transactions for this sender.
+        let nonce_fut = self
+            .provider
+            .get_transaction_count(self.sender_address)
+            .block_id(BlockNumberOrTag::Pending.into());
+        match tokio::time::timeout(std::time::Duration::from_secs(2), nonce_fut).await {
+            Ok(Ok(chain_nonce)) => {
+                if chain_nonce < self.nonce {
+                    warn!(
+                        sender = self.sender_id,
+                        local_nonce = self.nonce,
+                        chain_nonce,
+                        gap = self.nonce - chain_nonce,
+                        block = block.header.number,
+                        "Nonce gap detected, resetting to chain nonce"
+                    );
+                    self.nonce = chain_nonce;
+                }
+            }
+            Ok(Err(e)) => {
+                debug!(
+                    sender = self.sender_id,
+                    error = %e,
+                    "Failed to re-sync nonce from chain"
+                );
+            }
+            Err(_) => {
+                debug!(
+                    sender = self.sender_id,
+                    "Nonce re-sync timed out, will retry next block"
+                );
             }
         }
     }
