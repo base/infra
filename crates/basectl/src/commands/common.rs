@@ -7,7 +7,7 @@ use alloy_primitives::B256;
 use chrono::{DateTime, Local};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Cell, Paragraph, Row, Table},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
 use crate::rpc::{L1BlockInfo, L1ConnectionMode};
@@ -70,6 +70,7 @@ pub const EVENT_POLL_TIMEOUT: Duration = Duration::from_millis(100);
 pub const RATE_WINDOW_30S: Duration = Duration::from_secs(30);
 pub const RATE_WINDOW_2M: Duration = Duration::from_secs(120);
 pub const RATE_WINDOW_5M: Duration = Duration::from_secs(300);
+pub const L1_BLOCK_WINDOW: usize = 10;
 
 // =============================================================================
 // Shared Data Types
@@ -270,8 +271,6 @@ pub struct DaTracker {
     pub l1_blocks: VecDeque<L1Block>,
     pub growth_tracker: RateTracker,
     pub burn_tracker: RateTracker,
-    pub total_blob_tracker: RateTracker,
-    pub base_blob_tracker: RateTracker,
     pub last_base_blob_time: Option<Instant>,
     /// Safe L2 block at the time of last L1→L2 attribution.
     /// Used to compute the delta of L2 blocks to attribute to the next L1 blob block.
@@ -293,8 +292,6 @@ impl DaTracker {
             l1_blocks: VecDeque::with_capacity(MAX_HISTORY),
             growth_tracker: RateTracker::new(),
             burn_tracker: RateTracker::new(),
-            total_blob_tracker: RateTracker::new(),
-            base_blob_tracker: RateTracker::new(),
             last_base_blob_time: None,
             last_attributed_safe_l2: 0,
         }
@@ -396,11 +393,7 @@ impl DaTracker {
 
         let l1_block = L1Block::from_info(info);
 
-        if l1_block.total_blobs > 0 {
-            self.total_blob_tracker.add_sample(l1_block.total_blobs);
-        }
         if l1_block.base_blobs > 0 {
-            self.base_blob_tracker.add_sample(l1_block.base_blobs);
             self.last_base_blob_time = Some(Instant::now());
         }
 
@@ -504,17 +497,24 @@ impl DaTracker {
         })
     }
 
-    pub fn base_blob_share(&self, window: Duration) -> Option<f64> {
-        let total = self.total_blob_tracker.rate_over(window)?;
-        let base = self.base_blob_tracker.rate_over(window)?;
-        if total > 0.0 { Some(base / total) } else { None }
+    pub fn base_blob_share(&self, n: usize) -> Option<f64> {
+        let blocks: Vec<_> = self.l1_blocks.iter().take(n).collect();
+        if blocks.is_empty() {
+            return None;
+        }
+        let total: u64 = blocks.iter().map(|b| b.total_blobs).sum();
+        let base: u64 = blocks.iter().map(|b| b.base_blobs).sum();
+        if total > 0 { Some(base as f64 / total as f64) } else { None }
     }
 
-    pub fn blob_target_usage(&self, window: Duration, l1_blob_target: u64) -> Option<f64> {
-        let blob_rate = self.total_blob_tracker.rate_over(window)?;
-        let blocks_per_sec = 1.0 / 12.0;
-        let target_rate = l1_blob_target as f64 * blocks_per_sec;
-        Some(blob_rate / target_rate)
+    pub fn blob_target_usage(&self, n: usize, l1_blob_target: u64) -> Option<f64> {
+        let blocks: Vec<_> = self.l1_blocks.iter().take(n).collect();
+        if blocks.is_empty() || l1_blob_target == 0 {
+            return None;
+        }
+        let total_blobs: u64 = blocks.iter().map(|b| b.total_blobs).sum();
+        let expected = blocks.len() as f64 * l1_blob_target as f64;
+        Some(total_blobs as f64 / expected)
     }
 }
 
@@ -653,7 +653,7 @@ pub fn render_l1_blocks_table<'a>(
     area: Rect,
     l1_blocks: impl Iterator<Item = &'a L1Block>,
     is_active: bool,
-    selected_row: usize,
+    table_state: &mut TableState,
     filter: L1BlockFilter,
     title: &str,
     connection_mode: Option<L1ConnectionMode>,
@@ -683,16 +683,15 @@ pub fn render_l1_blocks_table<'a>(
         Cell::from("Age").style(header_style),
     ]);
 
-    // Calculate available width for L1 block column
-    // Other columns need: Blobs(5) + L2(4) + Ratio(6) + Age(5) + spacing(4) = 24
     let fixed_cols_width = 5 + 4 + 6 + 5 + 4;
     let l1_col_width = inner.width.saturating_sub(fixed_cols_width).clamp(4, 9) as usize;
 
+    let selected_row = table_state.selected();
+
     let rows: Vec<Row> = l1_blocks
-        .take(inner.height.saturating_sub(1) as usize)
         .enumerate()
         .map(|(idx, l1_block)| {
-            let is_selected = is_active && idx == selected_row;
+            let is_selected = is_active && selected_row == Some(idx);
 
             let style = if is_selected {
                 Style::default().fg(Color::White).bg(COLOR_ROW_SELECTED)
@@ -728,7 +727,7 @@ pub fn render_l1_blocks_table<'a>(
     ];
 
     let table = Table::new(rows, widths).header(header);
-    f.render_widget(table, inner);
+    f.render_stateful_widget(table, inner, &mut table_state.clone());
 }
 
 pub fn render_da_backlog_bar(
@@ -838,6 +837,19 @@ pub fn render_da_backlog_bar(
     let line = Line::from(spans);
     let para = Paragraph::new(line);
     f.render_widget(para, inner);
+}
+
+pub fn target_usage_color(usage: f64) -> Color {
+    // 0% = blue (0,100,255) → 100% = yellow (255,255,0) → 150% = red (255,0,0)
+    let t = usage.clamp(0.0, 1.5);
+    let (r, g, b) = if t <= 1.0 {
+        let p = t;
+        ((p * 255.0) as u8, (100.0 + p * 155.0) as u8, (255.0 - p * 255.0) as u8)
+    } else {
+        let p = (t - 1.0) / 0.5;
+        (255, (255.0 - p * 255.0) as u8, 0)
+    };
+    Color::Rgb(r, g, b)
 }
 
 pub fn time_diff_color(ms: i64) -> Color {
