@@ -20,7 +20,7 @@ async fn test_e2e_static_data() {
     let reth_mempool = load_static_mempool_content("testdata/reth_mempool.json")
         .expect("Failed to load reth mempool data");
 
-    // Use constant network fees for testing (same as Go version)
+    // Use constant network fees for testing
     let base_fee = 0x2601ff_u128; // 0x2601ff
     let gas_price = 0x36daa7_u128; // 0x36daa7
 

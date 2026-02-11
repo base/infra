@@ -1,0 +1,28 @@
+[package]
+name = "rpc-collector-bin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "rpc-collector"
+path = "src/main.rs"
+
+[dependencies]
+rpc-collector.workspace = true
+clap.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dotenvy.workspace = true
+cadence.workspace = true
+alloy-provider = { workspace = true, features = ["reqwest"] }
+op-alloy-network.workspace = true
+url.workspace = true
+alloy-primitives.workspace = true
+alloy-sol-types.workspace = true
+tokio-util = { workspace = true }

@@ -44,54 +44,100 @@ needless-pass-by-ref-mut = "warn"
 string-lit-as-bytes = "warn"
 
 [workspace.dependencies]
-cadence = "1.4"
-clap = { version = "4.0", features = ["derive", "env"] }
-tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
-futures-util = "0.3"
-url = "2.5"
-ratatui = "0.29"
-crossterm = "0.28"
-chrono = "0.4"
-anyhow = "1.0"
-serde_yaml = "0.9"
-dirs = "6.0"
-arboard = "3.4"
-dotenvy = "0.15.7"
-async-trait = "0.1"
-mempool-rebroadcaster = { path = "./crates/mempool-rebroadcaster" }
-sidecrush = { path = "./crates/sidecrush" }
-metrics = "0.24.1"
-metrics-derive = "0.1"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+# Internal crates
+basectl-cli = { path = "crates/basectl" }
+mempool-rebroadcaster = { path = "crates/mempool-rebroadcaster" }
+rpc-collector = { path = "crates/rpc-collector" }
+sidecrush = { path = "crates/sidecrush" }
+
+# base-reth
+base-bundles = { git = "https://github.com/base/base", branch = "main" }
+base-primitives = { git = "https://github.com/base/base.git", features = ["flashblocks"] }
+base-reth-rpc-types = { git = "https://github.com/base/base", branch = "main" }
+
+# revm
+op-revm = { version = "15.0.0", default-features = false }
+revm-context-interface = { version = "15.0.0", default-features = false }
 
 # alloy
+alloy-consensus = { version = "1.5.2" }
+alloy-contract = { version = "1.5.2" }
+alloy-eips = { version = "1.5.2", default-features = false }
+alloy-genesis = { version = "1.5.2", default-features = false }
+alloy-hardforks = { version = "0.5" }
+alloy-network = { version = "1.6.3" }
+alloy-network-primitives = { version = "1.6.3" }
 alloy-primitives = { version = "1.5.2", default-features = false, features = [
     "map-foldhash",
 ] }
-alloy-genesis = { version = "1.5.2", default-features = false }
-alloy-eips = { version = "1.5.2", default-features = false }
+alloy-provider = { version = "1.5.2", features = ["ws", "pubsub"] }
+alloy-rlp = { version = "0.3", default-features = false }
+alloy-rpc-client = { version = "1.5.2" }
 alloy-rpc-types = { version = "1.5.2", default-features = false }
 alloy-rpc-types-engine = { version = "1.5.2", default-features = false }
 alloy-rpc-types-eth = { version = "1.5.2" }
-alloy-consensus = { version = "1.5.2" }
-alloy-trie = { version = "0.9.1", default-features = false }
-alloy-provider = { version = "1.5.2", features = ["ws", "pubsub"] }
-alloy-hardforks = { version = "0.5" }
-alloy-rpc-client = { version = "1.5.2" }
-alloy-transport-http = { version = "1.5.2" }
 alloy-sol-types = { version = "1.5.2" }
-alloy-contract = { version = "1.5.2" }
+alloy-transport-http = { version = "1.5.2" }
+alloy-trie = { version = "0.9.1", default-features = false }
 
 # op-alloy
-op-alloy-network = { version = "0.22.0", default-features = false }
+op-alloy-consensus = { version = "0.22.0", default-features = false }
+op-alloy-network = { version = "0.22.0", default-features = false } 
 op-alloy-rpc-types = { version = "0.22.0", default-features = false }
 op-alloy-rpc-types-engine = { version = "0.22.0", default-features = false }
-op-alloy-consensus = { version = "0.22.0", default-features = false }
 
-# base
-base-flashtypes = { git = "https://github.com/base/base.git" }
-basectl-cli = { path = "crates/basectl" }
+# tokio & async
+async-trait = "0.1.89"
+futures = { version = "0.3.31", default-features = false }
+futures-util = "0.3"
+tokio = { version = "1.47.1", features = ["full"] }
+tokio-tungstenite = { version = "0.26", features = ["native-tls"] }
+tokio-util = { version = "0.7", default-features = false }
+
+# networking & rpc
+axum = { version = "0.8.3", default-features = false }
+jsonrpsee = { version = "0.26.0", default-features = false }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+url = { version = "2.5.7", default-features = false }
+
+# kafka & s3
+aws-config = { version = "1.1.7", default-features = false }
+aws-credential-types = { version = "1.1.7", default-features = false }
+aws-sdk-s3 = { version = "1.106.0", default-features = false }
+bytes = { version = "1.8.0", default-features = false }
+rdkafka = { version = "0.37.0", default-features = false }
+
+# serialization
+serde = { version = "1.0.219", default-features = false, features = ["derive"] }
+serde_json = { version = "1.0.143", default-features = false }
+serde_yaml = "0.9"
+
+# observability
+cadence = "1.4"
+metrics = { version = "0.24.1", default-features = false }
+metrics-derive = { version = "0.1", default-features = false }
+metrics-exporter-prometheus = { version = "0.17.0", default-features = false }
+tracing = { version = "0.1.41", default-features = false }
+tracing-subscriber = { version = "0.3.20", default-features = false, features = ["env-filter", "fmt", "ansi", "json"] }
+
+# cli & tui
+clap = { version = "4.5.47", default-features = false, features = ["std", "derive", "env"] }
+crossterm = "0.28"
+ratatui = "0.29"
+
+# testing
+testcontainers = { version = "0.23.1", default-features = false }
+testcontainers-modules = { version = "0.11.2", default-features = false }
+wiremock = { version = "0.6.2", default-features = false }
+
+# misc
+anyhow = { version = "1.0.99", default-features = false }
+arboard = "3.4"
+backon = { version = "1.5.2", default-features = false }
+brotli = "8"
+chrono = "0.4"
+dirs = "6.0"
+dotenvy = { version = "0.15.7", default-features = false }
+moka = { version = "0.12.12", default-features = false }
+regex = "1"
+uuid = { version = "1.18.1", default-features = false }
