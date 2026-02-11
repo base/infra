@@ -61,7 +61,7 @@ impl DaMonitorView {
         }
     }
 
-    fn active_table_state(&mut self) -> &mut TableState {
+    const fn active_table_state(&mut self) -> &mut TableState {
         match self.selected_panel {
             Panel::L2Blocks => &mut self.l2_table_state,
             Panel::L1Blocks => &mut self.l1_table_state,
@@ -93,20 +93,20 @@ impl View for DaMonitorView {
         match key.code {
             KeyCode::Up | KeyCode::Char('k') => {
                 let state = self.active_table_state();
-                if let Some(selected) = state.selected() {
-                    if selected > 0 {
-                        state.select(Some(selected - 1));
-                    }
+                if let Some(selected) = state.selected()
+                    && selected > 0
+                {
+                    state.select(Some(selected - 1));
                 }
                 Action::None
             }
             KeyCode::Down | KeyCode::Char('j') => {
                 let max = self.panel_len(self.selected_panel, resources).saturating_sub(1);
                 let state = self.active_table_state();
-                if let Some(selected) = state.selected() {
-                    if selected < max {
-                        state.select(Some(selected + 1));
-                    }
+                if let Some(selected) = state.selected()
+                    && selected < max
+                {
+                    state.select(Some(selected + 1));
                 }
                 Action::None
             }

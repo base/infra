@@ -11,10 +11,10 @@ use ratatui::{
 use crate::{
     app::{Action, Resources, View},
     commands::common::{
-        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, L1BlockFilter, L1_BLOCK_WINDOW,
-        RATE_WINDOW_2M, backlog_size_color, build_gas_bar, format_bytes, format_duration,
-        format_gwei, format_rate, render_da_backlog_bar, render_l1_blocks_table,
-        target_usage_color, time_diff_color, truncate_block_number,
+        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, L1_BLOCK_WINDOW, L1BlockFilter, RATE_WINDOW_2M,
+        backlog_size_color, build_gas_bar, format_bytes, format_duration, format_gwei, format_rate,
+        render_da_backlog_bar, render_l1_blocks_table, target_usage_color, time_diff_color,
+        truncate_block_number,
     },
     tui::{Keybinding, Toast},
 };
@@ -87,7 +87,7 @@ impl CommandCenterView {
         };
     }
 
-    fn active_table_state(&mut self) -> &mut TableState {
+    const fn active_table_state(&mut self) -> &mut TableState {
         match self.focused_panel {
             Panel::Flashblocks => &mut self.flash_table_state,
             Panel::Da => &mut self.da_table_state,
@@ -106,15 +106,8 @@ impl CommandCenterView {
     fn update_highlighted_block(&mut self, resources: &Resources) {
         let row = self.selected_row(self.focused_panel);
         self.highlighted_block = match self.focused_panel {
-            Panel::Flashblocks => {
-                resources.flash.entries.get(row).map(|e| e.block_number)
-            }
-            Panel::Da => resources
-                .da
-                .tracker
-                .block_contributions
-                .get(row)
-                .map(|c| c.block_number),
+            Panel::Flashblocks => resources.flash.entries.get(row).map(|e| e.block_number),
+            Panel::Da => resources.da.tracker.block_contributions.get(row).map(|c| c.block_number),
             Panel::L1Blocks => None,
         };
     }
@@ -122,11 +115,9 @@ impl CommandCenterView {
     fn get_copyable_block(&self, resources: &Resources) -> Option<String> {
         let row = self.selected_row(self.focused_panel);
         match self.focused_panel {
-            Panel::Flashblocks => resources
-                .flash
-                .entries
-                .get(row)
-                .map(|e| e.block_number.to_string()),
+            Panel::Flashblocks => {
+                resources.flash.entries.get(row).map(|e| e.block_number.to_string())
+            }
             Panel::Da => resources
                 .da
                 .tracker
@@ -190,10 +181,10 @@ impl View for CommandCenterView {
                     Panel::Da => &mut self.da_table_state,
                     Panel::L1Blocks => &mut self.l1_table_state,
                 };
-                if let Some(selected) = state.selected() {
-                    if selected > 0 {
-                        state.select(Some(selected - 1));
-                    }
+                if let Some(selected) = state.selected()
+                    && selected > 0
+                {
+                    state.select(Some(selected - 1));
                 }
                 self.update_highlighted_block(resources);
                 Action::None
@@ -218,10 +209,10 @@ impl View for CommandCenterView {
                             .saturating_sub(1),
                     ),
                 };
-                if let Some(selected) = state.selected() {
-                    if selected < max {
-                        state.select(Some(selected + 1));
-                    }
+                if let Some(selected) = state.selected()
+                    && selected < max
+                {
+                    state.select(Some(selected + 1));
                 }
                 self.update_highlighted_block(resources);
                 Action::None
