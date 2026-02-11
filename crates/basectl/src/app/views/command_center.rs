@@ -5,24 +5,26 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, TableState},
 };
 
 use crate::{
     app::{Action, Resources, View},
     commands::common::{
-        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, L1BlockFilter, RATE_WINDOW_2M,
-        backlog_size_color, build_gas_bar, format_bytes, format_duration, format_gwei, format_rate,
-        render_da_backlog_bar, render_l1_blocks_table, time_diff_color, truncate_block_number,
+        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, L1BlockFilter, L1_BLOCK_WINDOW,
+        RATE_WINDOW_2M, backlog_size_color, build_gas_bar, format_bytes, format_duration,
+        format_gwei, format_rate, render_da_backlog_bar, render_l1_blocks_table,
+        target_usage_color, time_diff_color, truncate_block_number,
     },
-    tui::Keybinding,
+    tui::{Keybinding, Toast},
 };
 
 const KEYBINDINGS: &[Keybinding] = &[
     Keybinding { key: "Esc", description: "Back to home" },
     Keybinding { key: "?", description: "Toggle help" },
     Keybinding { key: "←/→/Tab/1-3", description: "Switch panel" },
-    Keybinding { key: "↑/↓", description: "Navigate" },
+    Keybinding { key: "↑/↓/j/k", description: "Navigate" },
+    Keybinding { key: "g/G", description: "Top/Bottom" },
     Keybinding { key: "Space", description: "Pause flashblocks" },
     Keybinding { key: "y", description: "Copy block number" },
     Keybinding { key: "f", description: "Filter L1 blocks" },
@@ -38,9 +40,9 @@ enum Panel {
 #[derive(Debug)]
 pub struct CommandCenterView {
     focused_panel: Panel,
-    da_selected_row: usize,
-    flash_selected_row: usize,
-    l1_selected_row: usize,
+    da_table_state: TableState,
+    flash_table_state: TableState,
+    l1_table_state: TableState,
     highlighted_block: Option<u64>,
     l1_filter: L1BlockFilter,
 }
@@ -52,12 +54,18 @@ impl Default for CommandCenterView {
 }
 
 impl CommandCenterView {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
+        let mut da_table_state = TableState::default();
+        da_table_state.select(Some(0));
+        let mut flash_table_state = TableState::default();
+        flash_table_state.select(Some(0));
+        let mut l1_table_state = TableState::default();
+        l1_table_state.select(Some(0));
         Self {
             focused_panel: Panel::Flashblocks,
-            da_selected_row: 0,
-            flash_selected_row: 0,
-            l1_selected_row: 0,
+            da_table_state,
+            flash_table_state,
+            l1_table_state,
             highlighted_block: None,
             l1_filter: L1BlockFilter::All,
         }
@@ -79,39 +87,57 @@ impl CommandCenterView {
         };
     }
 
+    fn active_table_state(&mut self) -> &mut TableState {
+        match self.focused_panel {
+            Panel::Flashblocks => &mut self.flash_table_state,
+            Panel::Da => &mut self.da_table_state,
+            Panel::L1Blocks => &mut self.l1_table_state,
+        }
+    }
+
+    fn selected_row(&self, panel: Panel) -> usize {
+        match panel {
+            Panel::Flashblocks => self.flash_table_state.selected().unwrap_or(0),
+            Panel::Da => self.da_table_state.selected().unwrap_or(0),
+            Panel::L1Blocks => self.l1_table_state.selected().unwrap_or(0),
+        }
+    }
+
     fn update_highlighted_block(&mut self, resources: &Resources) {
+        let row = self.selected_row(self.focused_panel);
         self.highlighted_block = match self.focused_panel {
             Panel::Flashblocks => {
-                resources.flash.entries.get(self.flash_selected_row).map(|e| e.block_number)
+                resources.flash.entries.get(row).map(|e| e.block_number)
             }
             Panel::Da => resources
                 .da
                 .tracker
                 .block_contributions
-                .get(self.da_selected_row)
+                .get(row)
                 .map(|c| c.block_number),
             Panel::L1Blocks => None,
         };
     }
 
     fn get_copyable_block(&self, resources: &Resources) -> Option<String> {
+        let row = self.selected_row(self.focused_panel);
         match self.focused_panel {
             Panel::Flashblocks => resources
                 .flash
                 .entries
-                .get(self.flash_selected_row)
+                .get(row)
                 .map(|e| e.block_number.to_string()),
             Panel::Da => resources
                 .da
                 .tracker
                 .block_contributions
-                .get(self.da_selected_row)
+                .get(row)
                 .map(|c| c.block_number.to_string()),
             Panel::L1Blocks => resources
                 .da
                 .tracker
                 .filtered_l1_blocks(self.l1_filter)
-                .nth(self.l1_selected_row)
+                .nth(row)
                 .map(|b| b.block_number.to_string()),
         }
     }
@@ -151,7 +177,7 @@ impl View for CommandCenterView {
             }
             KeyCode::Char('f') => {
                 self.l1_filter = self.l1_filter.next();
-                self.l1_selected_row = 0;
+                self.l1_table_state.select(Some(0));
                 Action::None
             }
             KeyCode::Char(' ') => {
@@ -159,60 +185,71 @@ impl View for CommandCenterView {
                 Action::None
             }
             KeyCode::Up | KeyCode::Char('k') => {
-                match self.focused_panel {
-                    Panel::Da => {
-                        if self.da_selected_row > 0 {
-                            self.da_selected_row -= 1;
-                        }
-                    }
-                    Panel::Flashblocks => {
-                        if self.flash_selected_row > 0 {
-                            self.flash_selected_row -= 1;
-                        }
-                    }
-                    Panel::L1Blocks => {
-                        if self.l1_selected_row > 0 {
-                            self.l1_selected_row -= 1;
-                        }
+                let state = match self.focused_panel {
+                    Panel::Flashblocks => &mut self.flash_table_state,
+                    Panel::Da => &mut self.da_table_state,
+                    Panel::L1Blocks => &mut self.l1_table_state,
+                };
+                if let Some(selected) = state.selected() {
+                    if selected > 0 {
+                        state.select(Some(selected - 1));
                     }
                 }
                 self.update_highlighted_block(resources);
                 Action::None
             }
             KeyCode::Down | KeyCode::Char('j') => {
-                match self.focused_panel {
-                    Panel::Da => {
-                        let max = resources.da.tracker.block_contributions.len().saturating_sub(1);
-                        if self.da_selected_row < max {
-                            self.da_selected_row += 1;
-                        }
-                    }
-                    Panel::Flashblocks => {
-                        let max = resources.flash.entries.len().saturating_sub(1);
-                        if self.flash_selected_row < max {
-                            self.flash_selected_row += 1;
-                        }
-                    }
-                    Panel::L1Blocks => {
-                        let max = resources
+                let (state, max) = match self.focused_panel {
+                    Panel::Flashblocks => (
+                        &mut self.flash_table_state,
+                        resources.flash.entries.len().saturating_sub(1),
+                    ),
+                    Panel::Da => (
+                        &mut self.da_table_state,
+                        resources.da.tracker.block_contributions.len().saturating_sub(1),
+                    ),
+                    Panel::L1Blocks => (
+                        &mut self.l1_table_state,
+                        resources
                             .da
                             .tracker
                             .filtered_l1_blocks(self.l1_filter)
                             .count()
-                            .saturating_sub(1);
-                        if self.l1_selected_row < max {
-                            self.l1_selected_row += 1;
-                        }
+                            .saturating_sub(1),
+                    ),
+                };
+                if let Some(selected) = state.selected() {
+                    if selected < max {
+                        state.select(Some(selected + 1));
                     }
                 }
+                self.update_highlighted_block(resources);
+                Action::None
+            }
+            KeyCode::Char('g') => {
+                self.active_table_state().select(Some(0));
+                self.update_highlighted_block(resources);
+                Action::None
+            }
+            KeyCode::Char('G') => {
+                let max = match self.focused_panel {
+                    Panel::Flashblocks => resources.flash.entries.len(),
+                    Panel::Da => resources.da.tracker.block_contributions.len(),
+                    Panel::L1Blocks => {
+                        resources.da.tracker.filtered_l1_blocks(self.l1_filter).count()
+                    }
+                }
+                .saturating_sub(1);
+                self.active_table_state().select(Some(max));
                 self.update_highlighted_block(resources);
                 Action::None
             }
             KeyCode::Char('y') => {
                 if let Some(block_num) = self.get_copyable_block(resources)
                     && let Ok(mut clipboard) = Clipboard::new()
+                    && clipboard.set_text(&block_num).is_ok()
                 {
-                    let _ = clipboard.set_text(block_num);
+                    resources.toasts.push(Toast::info(format!("Copied {block_num}")));
                 }
                 Action::None
             }
@@ -221,11 +258,7 @@ impl View for CommandCenterView {
     }
 
     fn tick(&mut self, resources: &mut Resources) -> Action {
-        let at_top = match self.focused_panel {
-            Panel::Flashblocks => self.flash_selected_row == 0,
-            Panel::Da => self.da_selected_row == 0,
-            Panel::L1Blocks => self.l1_selected_row == 0,
-        };
+        let at_top = self.selected_row(self.focused_panel) == 0;
         if at_top {
             self.update_highlighted_block(resources);
         }
@@ -269,7 +302,7 @@ impl View for CommandCenterView {
             panel_chunks[0],
             resources,
             self.focused_panel == Panel::Flashblocks,
-            self.flash_selected_row,
+            &mut self.flash_table_state,
             self.highlighted_block,
         );
 
@@ -278,7 +311,7 @@ impl View for CommandCenterView {
             panel_chunks[1],
             resources,
             self.focused_panel == Panel::Da,
-            self.da_selected_row,
+            &mut self.da_table_state,
             self.highlighted_block,
         );
 
@@ -287,7 +320,7 @@ impl View for CommandCenterView {
             panel_chunks[2],
             resources.da.tracker.filtered_l1_blocks(self.l1_filter),
             self.focused_panel == Panel::L1Blocks,
-            self.l1_selected_row,
+            &mut self.l1_table_state,
             self.l1_filter,
             "L1 Blocks",
             resources.da.l1_connection_mode,
@@ -364,8 +397,8 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
     let growth_rate = tracker.growth_tracker.rate_over(RATE_WINDOW_2M);
     let burn_rate = tracker.burn_tracker.rate_over(RATE_WINDOW_2M);
     let time_since = tracker.last_base_blob_time.map(|t| t.elapsed());
-    let base_share = tracker.base_blob_share(RATE_WINDOW_2M);
-    let target_usage = tracker.blob_target_usage(RATE_WINDOW_2M, resources.config.l1_blob_target);
+    let base_share = tracker.base_blob_share(L1_BLOCK_WINDOW);
+    let target_usage = tracker.blob_target_usage(L1_BLOCK_WINDOW, resources.config.l1_blob_target);
 
     let flash_status = if resources.flash.paused { " [PAUSED]" } else { "" };
 
@@ -386,7 +419,7 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
             Span::styled("L1: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 target_usage.map_or_else(|| "-".to_string(), |u| format!("{:.0}%", u * 100.0)),
-                Style::default().fg(Color::Yellow),
+                Style::default().fg(target_usage.map_or(Color::DarkGray, target_usage_color)),
             ),
             Span::raw(" "),
             Span::styled("Base: ", Style::default().fg(Color::DarkGray)),
@@ -435,7 +468,7 @@ fn render_da_panel(
     area: Rect,
     resources: &Resources,
     is_active: bool,
-    selected_row: usize,
+    table_state: &mut TableState,
     highlighted_block: Option<u64>,
 ) {
     use ratatui::widgets::{Cell, Row, Table};
@@ -456,7 +489,6 @@ fn render_da_panel(
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    // DA(8) + Age(6) + spacing(3) = 17
     let fixed_cols_width = 8 + 6 + 3;
     let block_col_width = inner.width.saturating_sub(fixed_cols_width).clamp(4, 10) as usize;
 
@@ -467,13 +499,14 @@ fn render_da_panel(
         Cell::from("Age").style(header_style),
     ]);
 
+    let selected_row = table_state.selected();
+
     let rows: Vec<Row> = tracker
         .block_contributions
         .iter()
-        .take(inner.height.saturating_sub(1) as usize)
         .enumerate()
         .map(|(idx, contrib)| {
-            let is_selected = is_active && idx == selected_row;
+            let is_selected = is_active && selected_row == Some(idx);
             let is_highlighted = highlighted_block == Some(contrib.block_number);
             let is_safe = contrib.block_number <= tracker.safe_l2_block;
 
@@ -503,7 +536,7 @@ fn render_da_panel(
 
     let widths = [Constraint::Max(10), Constraint::Length(8), Constraint::Min(6)];
     let table = Table::new(rows, widths).header(header);
-    f.render_widget(table, inner);
+    f.render_stateful_widget(table, inner, &mut table_state.clone());
 }
 
 const GAS_BAR_CHARS: usize = 20;
@@ -514,7 +547,7 @@ fn render_flash_panel(
     area: Rect,
     resources: &Resources,
     is_active: bool,
-    selected_row: usize,
+    table_state: &mut TableState,
     highlighted_block: Option<u64>,
 ) {
     use ratatui::widgets::{Cell, Row, Table};
@@ -534,7 +567,6 @@ fn render_flash_panel(
     let inner = block.inner(area);
     f.render_widget(block, area);
 
-    // Idx(4) + Txs(4) + Gas(22) + BaseFee(14) + Dt(8) + spacing(6) = 58
     let fixed_cols_width = 4 + 4 + (GAS_BAR_CHARS as u16 + 2) + 14 + 8 + 6;
     let block_col_width = inner.width.saturating_sub(fixed_cols_width).clamp(4, 10) as usize;
 
@@ -548,13 +580,14 @@ fn render_flash_panel(
         Cell::from("Δt").style(header_style),
     ]);
 
+    let selected_row = table_state.selected();
+
     let rows: Vec<Row> = flash
         .entries
         .iter()
-        .take(inner.height.saturating_sub(1) as usize)
         .enumerate()
         .map(|(idx, entry)| {
-            let is_selected = is_active && idx == selected_row;
+            let is_selected = is_active && selected_row == Some(idx);
             let is_highlighted = highlighted_block == Some(entry.block_number);
 
             let style = if is_selected {
@@ -614,5 +647,5 @@ fn render_flash_panel(
     ];
 
     let table = Table::new(rows, widths).header(header);
-    f.render_widget(table, inner);
+    f.render_stateful_widget(table, inner, &mut table_state.clone());
 }
