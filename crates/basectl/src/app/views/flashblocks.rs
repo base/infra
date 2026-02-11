@@ -12,7 +12,7 @@ use crate::{
         COLOR_ACTIVE_BORDER, COLOR_ROW_HIGHLIGHTED, COLOR_ROW_SELECTED, build_gas_bar, format_gas,
         format_gwei, time_diff_color, truncate_block_number,
     },
-    tui::Keybinding,
+    tui::{Keybinding, Toast},
 };
 
 const GAS_BAR_CHARS: usize = 40;
@@ -115,7 +115,10 @@ impl View for FlashblocksView {
                     && let Some(entry) = resources.flash.entries.get(idx)
                     && let Ok(mut clipboard) = Clipboard::new()
                 {
-                    let _ = clipboard.set_text(entry.block_number.to_string());
+                    let block_num = entry.block_number.to_string();
+                    if clipboard.set_text(&block_num).is_ok() {
+                        resources.toasts.push(Toast::info(format!("Copied {block_num}")));
+                    }
                 }
                 Action::None
             }
