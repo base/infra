@@ -574,22 +574,20 @@ pub fn format_gwei(wei: u128) -> String {
     if gwei >= 1.0 { format!("{gwei:.2} gwei") } else { format!("{gwei:.4} gwei") }
 }
 
-pub const fn backlog_size_color(bytes: u64) -> Color {
-    if bytes < 5_000_000 {
-        Color::Rgb(100, 200, 100)
-    } else if bytes < 10_000_000 {
-        Color::Rgb(150, 220, 100)
-    } else if bytes < 20_000_000 {
-        Color::Rgb(200, 220, 80)
-    } else if bytes < 30_000_000 {
-        Color::Rgb(240, 200, 60)
-    } else if bytes < 45_000_000 {
-        Color::Rgb(255, 160, 60)
-    } else if bytes < 60_000_000 {
-        Color::Rgb(255, 100, 80)
-    } else {
-        Color::Rgb(255, 80, 120)
-    }
+const BACKLOG_THRESHOLDS: &[(u64, Color)] = &[
+    (5_000_000, Color::Rgb(100, 200, 100)),
+    (10_000_000, Color::Rgb(150, 220, 100)),
+    (20_000_000, Color::Rgb(200, 220, 80)),
+    (30_000_000, Color::Rgb(240, 200, 60)),
+    (45_000_000, Color::Rgb(255, 160, 60)),
+    (60_000_000, Color::Rgb(255, 100, 80)),
+];
+
+pub fn backlog_size_color(bytes: u64) -> Color {
+    BACKLOG_THRESHOLDS
+        .iter()
+        .find(|(threshold, _)| bytes < *threshold)
+        .map_or(Color::Rgb(255, 80, 120), |(_, color)| *color)
 }
 
 pub const fn block_color(block_number: u64) -> Color {
@@ -839,27 +837,38 @@ pub fn render_da_backlog_bar(
     f.render_widget(para, inner);
 }
 
+const TARGET_USAGE_MAX: f64 = 1.5;
+
 pub fn target_usage_color(usage: f64) -> Color {
-    // 0% = blue (0,100,255) → 100% = yellow (255,255,0) → 150% = red (255,0,0)
-    let t = usage.clamp(0.0, 1.5);
-    let (r, g, b) = if t <= 1.0 {
-        let p = t;
-        ((p * 255.0) as u8, (100.0 + p * 155.0) as u8, (255.0 - p * 255.0) as u8)
+    let t = usage.clamp(0.0, TARGET_USAGE_MAX);
+    if t <= 1.0 {
+        lerp_rgb((0, 100, 255), (255, 255, 0), t)
     } else {
-        let p = (t - 1.0) / 0.5;
-        (255, (255.0 - p * 255.0) as u8, 0)
-    };
-    Color::Rgb(r, g, b)
+        lerp_rgb((255, 255, 0), (255, 0, 0), (t - 1.0) / (TARGET_USAGE_MAX - 1.0))
+    }
 }
 
+const fn lerp_rgb(a: (u8, u8, u8), b: (u8, u8, u8), t: f64) -> Color {
+    Color::Rgb(
+        (a.0 as f64 + (b.0 as f64 - a.0 as f64) * t) as u8,
+        (a.1 as f64 + (b.1 as f64 - a.1 as f64) * t) as u8,
+        (a.2 as f64 + (b.2 as f64 - a.2 as f64) * t) as u8,
+    )
+}
+
+const FLASHBLOCK_TARGET_MS: i64 = 200;
+const FLASHBLOCK_TOLERANCE_MS: i64 = 50;
+
 pub fn time_diff_color(ms: i64) -> Color {
-    if (150..=250).contains(&ms) {
+    let target = FLASHBLOCK_TARGET_MS;
+    let tol = FLASHBLOCK_TOLERANCE_MS;
+    if (target - tol..=target + tol).contains(&ms) {
         Color::Green
-    } else if (100..150).contains(&ms) {
+    } else if (target - 2 * tol..target - tol).contains(&ms) {
         Color::Blue
-    } else if ms < 100 {
+    } else if ms < target - 2 * tol {
         Color::Magenta
-    } else if (250..300).contains(&ms) {
+    } else if (target + tol..target + 2 * tol).contains(&ms) {
         Color::Yellow
     } else {
         Color::Red
