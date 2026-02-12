@@ -5,16 +5,17 @@ use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     prelude::*,
-    widgets::{Block, Borders, Paragraph, TableState},
+    widgets::{Block, Borders, Cell, Paragraph, Row, Table, TableState},
 };
 
 use crate::{
     app::{Action, Resources, View},
     commands::common::{
-        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, L1_BLOCK_WINDOW, L1BlockFilter, RATE_WINDOW_2M,
-        backlog_size_color, build_gas_bar, format_bytes, format_duration, format_gwei, format_rate,
-        render_da_backlog_bar, render_l1_blocks_table, target_usage_color, time_diff_color,
-        truncate_block_number,
+        COLOR_BASE_BLUE, COLOR_BURN, COLOR_GROWTH, COLOR_ROW_HIGHLIGHTED, COLOR_ROW_SELECTED,
+        L1_BLOCK_WINDOW, L1BlockFilter, RATE_WINDOW_2M, backlog_size_color, block_color,
+        block_color_bright, build_gas_bar, format_bytes, format_duration, format_gwei, format_rate,
+        render_da_backlog_bar, render_gas_usage_bar, render_l1_blocks_table, target_usage_color,
+        time_diff_color, truncate_block_number,
     },
     tui::{Keybinding, Toast},
 };
@@ -259,12 +260,25 @@ impl View for CommandCenterView {
     fn render(&mut self, frame: &mut Frame, area: Rect, resources: &Resources) {
         let main_chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Length(5), Constraint::Min(0)])
+            .constraints([
+                Constraint::Length(3),
+                Constraint::Length(3),
+                Constraint::Length(5),
+                Constraint::Min(0),
+            ])
             .split(area);
+
+        render_gas_usage_bar(
+            frame,
+            main_chunks[0],
+            &resources.flash.entries,
+            DEFAULT_ELASTICITY,
+            self.highlighted_block,
+        );
 
         render_da_backlog_bar(
             frame,
-            main_chunks[0],
+            main_chunks[1],
             &resources.da.tracker,
             resources.da.loading.as_ref(),
             resources.da.loaded,
@@ -274,7 +288,7 @@ impl View for CommandCenterView {
         let info_chunks = Layout::default()
             .direction(Direction::Horizontal)
             .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-            .split(main_chunks[1]);
+            .split(main_chunks[2]);
 
         render_config_panel(frame, info_chunks[0], resources);
         render_stats_panel(frame, info_chunks[1], resources);
@@ -286,7 +300,7 @@ impl View for CommandCenterView {
                 Constraint::Percentage(25),
                 Constraint::Percentage(25),
             ])
-            .split(main_chunks[2]);
+            .split(main_chunks[3]);
 
         render_flash_panel(
             frame,
@@ -462,13 +476,6 @@ fn render_da_panel(
     table_state: &mut TableState,
     highlighted_block: Option<u64>,
 ) {
-    use ratatui::widgets::{Cell, Row, Table};
-
-    use crate::commands::common::{
-        COLOR_ROW_HIGHLIGHTED, COLOR_ROW_SELECTED, block_color, format_bytes as fmt_bytes,
-        format_duration as fmt_dur,
-    };
-
     let tracker = &resources.da.tracker;
     let border_color = if is_active { Color::Rgb(100, 255, 100) } else { Color::Green };
 
@@ -518,8 +525,8 @@ fn render_da_panel(
             Row::new(vec![
                 Cell::from(truncate_block_number(contrib.block_number, block_col_width))
                     .style(block_style),
-                Cell::from(fmt_bytes(contrib.da_bytes)),
-                Cell::from(fmt_dur(Duration::from_secs(contrib.age_seconds()))),
+                Cell::from(format_bytes(contrib.da_bytes)),
+                Cell::from(format_duration(Duration::from_secs(contrib.age_seconds()))),
             ])
             .style(style)
         })
@@ -541,10 +548,6 @@ fn render_flash_panel(
     table_state: &mut TableState,
     highlighted_block: Option<u64>,
 ) {
-    use ratatui::widgets::{Cell, Row, Table};
-
-    use crate::commands::common::{COLOR_ROW_HIGHLIGHTED, COLOR_ROW_SELECTED};
-
     let flash = &resources.flash;
     let border_color = if is_active { Color::Rgb(100, 180, 255) } else { Color::Rgb(0, 82, 255) };
 
@@ -609,17 +612,19 @@ fn render_flash_panel(
                 |ms| (format!("+{ms}ms"), Style::default().fg(time_diff_color(ms))),
             );
 
-            let first_fb_style = if entry.index == 0 {
-                Style::default().fg(Color::Green)
+            let block_style = if entry.index == 0 {
+                Style::default()
+                    .fg(block_color_bright(entry.block_number))
+                    .add_modifier(Modifier::BOLD)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(block_color(entry.block_number))
             };
 
             Row::new(vec![
                 Cell::from(truncate_block_number(entry.block_number, block_col_width))
-                    .style(first_fb_style),
-                Cell::from(entry.index.to_string()).style(first_fb_style),
-                Cell::from(entry.tx_count.to_string()).style(first_fb_style),
+                    .style(block_style),
+                Cell::from(entry.index.to_string()).style(block_style),
+                Cell::from(entry.tx_count.to_string()).style(block_style),
                 Cell::from(gas_bar),
                 Cell::from(base_fee_str).style(base_fee_style),
                 Cell::from(time_diff_str).style(time_style),
