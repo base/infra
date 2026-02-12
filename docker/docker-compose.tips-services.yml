@@ -1,0 +1,39 @@
+services:
+  ingress-rpc:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ingress-rpc
+    container_name: tips-ingress-rpc
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "9002:9002"
+    env_file:
+      - ../.env.docker
+    volumes:
+      - ./kafka-properties/ingress-bundles-kafka-properties:/etc/kafka/ingress-bundles-kafka-properties:ro
+      - ./kafka-properties/ingress-audit-kafka-properties:/etc/kafka/ingress-audit-kafka-properties:ro
+      - ./kafka-properties/ingress-user-operation-consumer-kafka-properties:/etc/kafka/ingress-user-operation-consumer-kafka-properties:ro
+    restart: unless-stopped
+
+  audit:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.audit
+    container_name: tips-audit
+    env_file:
+      - ../.env.docker
+    volumes:
+      - ./kafka-properties/audit-kafka-properties:/etc/kafka/audit-kafka-properties:ro
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ..
+      dockerfile: ui/tips/Dockerfile
+    ports:
+      - "3000:3000"
+    container_name: tips-ui
+    env_file:
+      - ../.env.docker
+    restart: unless-stopped
