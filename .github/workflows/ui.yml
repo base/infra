@@ -10,9 +10,40 @@ on:
     paths: ['ui/**']
 
 jobs:
-  lint:
-    name: Lint
+  changes:
+    name: Detect Changes
     runs-on: ubuntu-latest
+    outputs:
+      projects: ${{ steps.filter.outputs.projects }}
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: paths
+        with:
+          filters: |
+            tips:
+              - 'ui/tips/**'
+      - id: filter
+        run: |
+          projects='[]'
+          if [ "${{ steps.paths.outputs.tips }}" == "true" ]; then
+            projects=$(echo "$projects" | jq -c '. + ["tips"]')
+          fi
+          echo "projects=$projects" >> $GITHUB_OUTPUT
+
+  lint:
+    name: Lint (${{ matrix.project }})
+    needs: changes
+    if: ${{ needs.changes.outputs.projects != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.changes.outputs.projects) }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -24,14 +55,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'yarn'
-          cache-dependency-path: ui/yarn.lock
-      - run: cp .env.example ui/.env
-      - run: cd ui && yarn install
-      - run: cd ui && yarn lint
+          cache-dependency-path: ui/${{ matrix.project }}/yarn.lock
+      - run: cp .env.example ui/${{ matrix.project }}/.env
+      - run: cd ui/${{ matrix.project }} && yarn install
+      - run: cd ui/${{ matrix.project }} && yarn lint
 
   type-check:
-    name: Type Check
+    name: Type Check (${{ matrix.project }})
+    needs: changes
+    if: ${{ needs.changes.outputs.projects != '[]' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.changes.outputs.projects) }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -43,14 +79,19 @@ jobs:
         with:
           node-version: '20'
           cache: 'yarn'
-          cache-dependency-path: ui/yarn.lock
-      - run: cp .env.example ui/.env
-      - run: cd ui && yarn install
-      - run: cd ui && npx tsc --noEmit
+          cache-dependency-path: ui/${{ matrix.project }}/yarn.lock
+      - run: cp .env.example ui/${{ matrix.project }}/.env
+      - run: cd ui/${{ matrix.project }} && yarn install
+      - run: cd ui/${{ matrix.project }} && npx tsc --noEmit
 
   build:
-    name: Build
+    name: Build (${{ matrix.project }})
+    needs: changes
+    if: ${{ needs.changes.outputs.projects != '[]' }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: ${{ fromJson(needs.changes.outputs.projects) }}
     steps:
       - name: Harden the runner (Audit all outbound calls)
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
@@ -62,7 +103,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'yarn'
-          cache-dependency-path: ui/yarn.lock
-      - run: cp .env.example ui/.env
-      - run: cd ui && yarn install
-      - run: cd ui && yarn build
+          cache-dependency-path: ui/${{ matrix.project }}/yarn.lock
+      - run: cp .env.example ui/${{ matrix.project }}/.env
+      - run: cd ui/${{ matrix.project }} && yarn install
+      - run: cd ui/${{ matrix.project }} && yarn build
