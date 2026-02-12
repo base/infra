@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use base_flashtypes::Flashblock;
+use base_primitives::Flashblock;
 use tokio::sync::mpsc;
 
 use crate::{
