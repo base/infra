@@ -93,5 +93,5 @@ op-alloy-rpc-types-engine = { version = "0.22.0", default-features = false }
 op-alloy-consensus = { version = "0.22.0", default-features = false }
 
 # base
-base-flashtypes = { git = "https://github.com/base/base.git" }
+base-primitives = { git = "https://github.com/base/base.git", features = ["flashblocks"] }
 basectl-cli = { path = "crates/basectl" }
