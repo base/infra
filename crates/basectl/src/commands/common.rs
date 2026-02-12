@@ -889,10 +889,11 @@ pub fn render_gas_usage_bar(
     let mut block_gas: Vec<(u64, u64)> = Vec::new();
     for entry in entries {
         if let Some(last) = block_gas.last_mut()
-            && last.0 == entry.block_number {
-                last.1 = last.1.max(entry.gas_used);
-                continue;
-            }
+            && last.0 == entry.block_number
+        {
+            last.1 = last.1.max(entry.gas_used);
+            continue;
+        }
         block_gas.push((entry.block_number, entry.gas_used));
     }
 
