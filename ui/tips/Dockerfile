@@ -1,13 +1,13 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY ui/package.json ui/yarn.lock ./
+COPY ui/tips/package.json ui/tips/yarn.lock ./
 RUN --mount=type=cache,target=/root/.yarn \
     yarn install --frozen-lockfile
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY ./ui .
+COPY ./ui/tips .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 

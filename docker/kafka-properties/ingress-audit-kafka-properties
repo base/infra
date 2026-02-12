@@ -1,4 +1,0 @@
-# Kafka configuration properties for ingress audit events
-bootstrap.servers=host.docker.internal:9094
-message.timeout.ms=5000
-compression.type=zstd
