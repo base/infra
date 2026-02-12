@@ -170,7 +170,7 @@ impl View for DaMonitorView {
             panel_chunks[0],
             resources,
             self.selected_panel == Panel::L2Blocks,
-            &mut self.l2_table_state,
+            &self.l2_table_state,
         );
 
         render_l1_blocks_table(
@@ -264,7 +264,7 @@ fn render_blocks_panel(
     area: Rect,
     resources: &Resources,
     is_active: bool,
-    table_state: &mut TableState,
+    table_state: &TableState,
 ) {
     use ratatui::widgets::{Cell, Row, Table};
 

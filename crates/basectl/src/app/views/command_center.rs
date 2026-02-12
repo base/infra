@@ -307,7 +307,7 @@ impl View for CommandCenterView {
             panel_chunks[0],
             resources,
             self.focused_panel == Panel::Flashblocks,
-            &mut self.flash_table_state,
+            &self.flash_table_state,
             self.highlighted_block,
         );
 
@@ -316,7 +316,7 @@ impl View for CommandCenterView {
             panel_chunks[1],
             resources,
             self.focused_panel == Panel::Da,
-            &mut self.da_table_state,
+            &self.da_table_state,
             self.highlighted_block,
         );
 
@@ -409,42 +409,12 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
 
     let lines = vec![
         Line::from(vec![
-            Span::styled("DA: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                format_bytes(tracker.da_backlog_bytes),
-                Style::default().fg(backlog_color),
-            ),
-            Span::raw("  "),
-            Span::styled("↑", Style::default().fg(COLOR_GROWTH)),
-            Span::styled(format_rate(growth_rate), Style::default().fg(COLOR_GROWTH)),
-            Span::raw(" "),
-            Span::styled("↓", Style::default().fg(COLOR_BURN)),
-            Span::styled(format_rate(burn_rate), Style::default().fg(COLOR_BURN)),
-            Span::raw("  "),
-            Span::styled("L1: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                target_usage.map_or_else(|| "-".to_string(), |u| format!("{:.0}%", u * 100.0)),
-                Style::default().fg(target_usage.map_or(Color::DarkGray, target_usage_color)),
-            ),
-            Span::raw(" "),
-            Span::styled("Base: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                base_share.map_or_else(|| "-".to_string(), |s| format!("{:.0}%", s * 100.0)),
-                Style::default().fg(COLOR_BASE_BLUE),
-            ),
-        ]),
-        Line::from(vec![
-            Span::styled("Last: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(
-                time_since.map(format_duration).unwrap_or_else(|| "-".to_string()),
-                Style::default().fg(Color::White),
-            ),
-            Span::raw("  "),
             Span::styled("Flash: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
                 resources.flash.message_count.to_string(),
                 Style::default().fg(Color::White),
             ),
+            Span::styled(flash_status, Style::default().fg(Color::Yellow)),
             Span::raw("  "),
             Span::styled("Missed: ", Style::default().fg(Color::DarkGray)),
             Span::styled(
@@ -455,7 +425,37 @@ fn render_stats_panel(f: &mut Frame, area: Rect, resources: &Resources) {
                     Color::Green
                 }),
             ),
-            Span::styled(flash_status, Style::default().fg(Color::Yellow)),
+            Span::raw("  "),
+            Span::styled("↑", Style::default().fg(COLOR_GROWTH)),
+            Span::styled(format_rate(growth_rate), Style::default().fg(COLOR_GROWTH)),
+            Span::raw(" "),
+            Span::styled("↓", Style::default().fg(COLOR_BURN)),
+            Span::styled(format_rate(burn_rate), Style::default().fg(COLOR_BURN)),
+        ]),
+        Line::from(vec![
+            Span::styled("DA: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                format_bytes(tracker.da_backlog_bytes),
+                Style::default().fg(backlog_color),
+            ),
+            Span::raw("  "),
+            Span::styled("L1: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                target_usage.map_or_else(|| "-".to_string(), |u| format!("{:.0}%", u * 100.0)),
+                Style::default().fg(target_usage.map_or(Color::DarkGray, target_usage_color)),
+            ),
+            Span::raw("  "),
+            Span::styled("Base: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                base_share.map_or_else(|| "-".to_string(), |s| format!("{:.0}%", s * 100.0)),
+                Style::default().fg(COLOR_BASE_BLUE),
+            ),
+            Span::raw("  "),
+            Span::styled("Last: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                time_since.map(format_duration).unwrap_or_else(|| "-".to_string()),
+                Style::default().fg(Color::White),
+            ),
         ]),
     ];
 
@@ -473,7 +473,7 @@ fn render_da_panel(
     area: Rect,
     resources: &Resources,
     is_active: bool,
-    table_state: &mut TableState,
+    table_state: &TableState,
     highlighted_block: Option<u64>,
 ) {
     let tracker = &resources.da.tracker;
@@ -545,7 +545,7 @@ fn render_flash_panel(
     area: Rect,
     resources: &Resources,
     is_active: bool,
-    table_state: &mut TableState,
+    table_state: &TableState,
     highlighted_block: Option<u64>,
 ) {
     let flash = &resources.flash;
